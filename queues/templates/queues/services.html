@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Select Service</h2>
+
+<ul>
+
+<table class="table table-striped">
+      
+    <tr>
+        <th>Branch</th>
+        <th>Organisation</th>                
+        <th>Category</th>
+        
+    </tr>
+{% for service in services %}
+{{service.id}}
+<tr>
+    <td><a href="{% url 'services_list' service.id %}">{{service.name}}</a></td>    
+    <td>{{service.organization}}</td>
+    <td>{{service.services_category}}</td>        
+    <td><button><a href="{% url 'branch_services' service.id %}">See Details</a></button></td> 
+</tr>    
+
+{% endfor %}
+</table>
+
+</ul>
+
+{% endblock %}

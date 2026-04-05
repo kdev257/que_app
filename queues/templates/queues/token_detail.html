@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+<h2>Your Token Details</h2>
+
+<div class="card p-3">
+
+<h3>Token Number: {{ token.token_number }}</h3>
+
+<p><strong>Branch:</strong> {{ token.branch }}</p>
+
+<p><strong>Date:</strong> {{ token.created_at}}</p>
+
+<hr>
+
+<h4>Services Selected</h4>
+
+<ul>
+{% for item in services %}
+<li>
+{{ item.service }} — Rs. {{ item.service.price }}
+</li>
+{% endfor %}
+</ul>
+
+<hr>
+
+<h4>Queue Status</h4>
+
+<p>Current Serving: <strong>{{ current_serving }}</strong></p>
+
+<p>People Ahead: <strong>{{ people_ahead }}</strong></p>
+<p>Waiting Time: <strong>{{ token.expected_waiting_time }}</strong></p>
+<p>Expected Service Time: <strong>{{ token.expected_service_time }}</strong></p>
+<p></p>
+
+</div>
+
+</div>
+
+{% endblock %}

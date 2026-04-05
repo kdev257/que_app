@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+<h2>Your Selected Services</h2>
+
+{% if cart_items %} 
+
+<table class="table table-striped">
+
+<thead>
+<tr>
+<th>Branch</th>
+<th>Service</th>
+<th>Price</th>
+<th>Remove</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for item in cart_items %}
+{{item.cart.id}}
+    <tr>
+        <td>{{ item.service.branch }}</td>
+        <td>{{ item.service.name }}</td>
+        <td>Rs. {{ item.service.price }}</td>        
+        <td><a href="{% url 'remove_cart_item' item.id %}" class="btn btn-sm btn-danger">Remove</a></td>
+    </tr>
+    {% endfor %}
+
+
+</tbody>
+
+</table>
+
+<h4>Total: Rs. {{ total_price }}</h4>
+
+<a href="{% url 'create_token' cart.id%}"class="btn btn-success">
+Confirm & Join Queue</a>
+
+
+
+{% else %}
+
+<p>Your cart is empty.</p>
+
+{% endif %} 
+
+</div> 
+ 
+ {% endblock %}

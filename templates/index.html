@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<body>    
+    <div class="text-center mt-5">
+        <h1>Welcome to QueueSaaS</h1>
+        <p class="lead">Smart queue management for modern businesses</p>
+
+        {% if not user.is_authenticated %}
+        <a href="/log/register/" class="btn btn-primary">Get Started</a>
+        {% endif %}
+    </div>
+</body>
+
+{% endblock %}

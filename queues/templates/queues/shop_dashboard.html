@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{%load crispy_forms_tags %}
+
+{% load static %}
+
+{% block content %}
+
+<style>
+/* =========================
+   GLOBAL
+========================= */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #f5f7fb;
+    color: #2c3e50;
+}
+
+/* =========================
+   CONTAINER
+========================= */
+.container-fluid {
+    width: 100%;
+    padding: 15px 20px;
+}
+
+/* =========================
+   HEADER
+========================= */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.dashboard-title {
+    font-size: 22px;
+    font-weight: 600;
+}
+
+/* =========================
+   SUMMARY CARDS
+========================= */
+.summary {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.card {
+    flex: 1;
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    text-align: center;
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.card p {
+    margin: 5px 0 0;
+    font-size: 13px;
+    color: #777;
+}
+
+/* =========================
+   TABLE
+========================= */
+.table-dashboard {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.table-dashboard th {
+    background: #1f2d3d;
+    color: white;
+    padding: 14px;
+    font-size: 13px;
+}
+
+.table-dashboard td {
+    padding: 14px;
+    border-bottom: 1px solid #eee;
+}
+
+.table-dashboard tr:hover {
+    background: #f9fbff;
+}
+
+/* =========================
+   STATUS COLORS
+========================= */
+.waiting {
+    background: #fff8e1;
+}
+
+.in_progress {
+    background: #e3f2fd;
+}
+
+.completed {
+    background: #e8f5e9;
+}
+
+/* =========================
+   BADGES
+========================= */
+.badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-waiting {
+    background: #ffe082;
+}
+
+.badge-progress {
+    background: #64b5f6;
+    color: white;
+}
+
+.badge-done {
+    background: #81c784;
+    color: white;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+.btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.btn-start {
+    background: #2196f3;
+    color: white;
+}
+
+.btn-end {
+    background: #4caf50;
+    color: white;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+/* =========================
+   NOW SERVING
+========================= */
+.now-serving {
+    color: #e53935;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* =========================
+   MOBILE
+========================= */
+@media (max-width: 768px) {
+    .summary {
+        flex-direction: column;
+    }
+
+    .table-dashboard {
+        display: block;
+        overflow-x: auto;
+    }
+}</style>
+
+<div class="container-fluid px-3">
+<div class="dashboard-header">
+    <div class="dashboard-title">💈 Salon Dashboard</div>
+</div>
+
+<div class="summary">
+    <div class="card text-warning" style="background: #fff8e1;">
+        <h3>{{ total_waiting }}</h3>
+        <p class="card-text text-warning">Waiting</p>
+    </div>
+    <div class="card text-success" style="background: #e8f5e9;">
+        <h3>{{ total_in_progress }}</h3>
+        <p class="card-text text-success">In Progress</p>
+    </div>
+    <div class="card text-info" style="background: #e3f2fd;">
+        <h3>{{ total_wait_time }} min</h3>
+        <p class="card-text text-info">Avg Wait</p>
+    </div>
+</div>
+<table class="table-dashboard">
+    
+    <thead>
+        <tr>
+            <th>Token No</th>
+            <th>Status</th>
+            <th>Waiting Time</th>
+            <th>Service Time</th>
+            <th>Expected Start</th>
+            <th>Actual Start</th>
+            <th>Expected End</th>
+            <th>Actual End</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+    {% for item in token_data %}
+        {% with token=item.token %}
+        <tr class="{{ token.status }}">
+
+            <td><strong>#{{ token.token_number }}</strong></td>
+
+            <td>
+                {% comment %} {{ token.status|title }} {% endcomment %}
+                <span class="badge 
+                    {% if token.status == 'waiting' %}badge-waiting
+                    {% elif token.status == 'in_progress' %}badge-progress
+                    {% else %}badge-done{% endif %}">
+                    {{ token.status|title }}
+                    </span>
+            </td>
+
+            <td>{{ item.waiting_time|floatformat:0 }} min</td>
+            <td>{{ item.service_time }} min</td>
+
+            <td>{{ item.expected_start_time|date:"H:i" }}</td>
+            <td>{{ item.start_time|default:"-"|date:"H:i" }}</td>
+
+            <td>{{ item.end_time|default:"-"|date:"H:i" }}</td>
+            <td>{{ item.actual_end_time|default:"-"|date:"H:i" }}</td>
+
+            <td>
+                
+                     {% if token.status == "in_progress" %}
+                    <button class="btn btn-end"><a href="{% url 'end_service' token.id %}">✔ End</a></button>
+
+                {% else %}
+                    <button class="btn btn-start"><a href="{% url 'start_service' token.id %}">▶ Start</a></button>
+                    <button class="btn btn-danger"><a href="{% url 'delete_token' token.id %}" onclick="return confirm('Are you sure you want to delete this token?')">✖ Delete</a></button>
+                    
+                {% endif %} 
+            </td>
+
+        </tr>
+        {% endwith %}
+    {% empty %}
+        <tr>
+            <td colspan="9" style="text-align:center;">No tokens available</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+
+</table>
+
+</div>
+
+{% endblock %}
