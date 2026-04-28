@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'organization',
     'queues',
     'accounts',
+    
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -119,6 +120,9 @@ USE_I18N = True
 
 USE_TZ = True
 
+SESSION_COOKIE_AGE = 1800  # 30 minutes
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/

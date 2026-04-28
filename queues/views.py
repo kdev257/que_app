@@ -3,7 +3,6 @@ from django.http import JsonResponse
 from organization.models import Service, Service_Category, Branch
 from accounts.models import Customer
 from login.models import User
-from .services import generate_token,calculate_real_waiting_time,calculate_service_time
 from icecream import ic
 from django.shortcuts import render,redirect
 from organization.models import Service
@@ -18,11 +17,9 @@ from django.db.models import Count
 from django.shortcuts import redirect
 from django.db import transaction
 from django.utils import timezone
-import heapq
-import math
-from time import strftime
 from django.db import transaction as db_transaction
-
+from datetime import datetime, timedelta
+from accounts.models import Promotion
 
 # Create your views here.
 
@@ -135,61 +132,78 @@ def create_token(request,id):
         cart_items = CartItem.objects.select_for_update().filter(cart=cart).select_related("service")
         #FETCH SERVICES AND BRANCH, CALCULATE EXPECTED SERVICE TIME
         new_expected_service_time = sum(item.service.average_time_minutes for item in cart_items )
-        staff = cart.branch.number_of_employees    
+        staff = cart.branch.number_of_employees
+        now=timezone.now()  
+        today =  timezone.localdate()
+        # combine date + time
+        opening_naive = datetime.combine(today, cart.branch.opening_time)
+        closing_naive = datetime.combine(today, cart.branch.closing_time)
+        # make them timezone aware (IST)
+        branch_opening_time = timezone.make_aware(opening_naive, timezone.get_current_timezone())
+        branch_closing_time = timezone.make_aware(closing_naive, timezone.get_current_timezone())
         branch = cart.branch
-        now = timezone.now()
+        ic(now,branch_opening_time, branch_closing_time)
+        commute_time = int(request.POST.get("commute_time", 0))
+        ic("Commute Time:", commute_time)
         #calculate waiting time based on current queue and staff availability
         people_ahead = (
             Token.objects
             .select_for_update()
-            .filter(branch=branch, status__in=["waiting", "in_progress"])
+            .filter(branch=branch, status__in=["waiting",])
         ).count()
-        current_serving = Token.objects.select_for_update().filter(branch=branch, status__in=["in_progress"]).count()        
-        # Edge Case Handling for Waiting Time Calculation
-        if people_ahead == 0 and current_serving < staff:
-            print("No one ahead and staff available, starting immediately.")
+        current_serving =Token.objects.filter(branch=branch,status__in=["in_progress"]).count()
+        que_size = people_ahead + current_serving
+        # insure that in no case waiting time is less than 0 
+                            
+        if que_size == 0:
+            ic("first condition executed")            
             waiting_time = 0
-            earliest_start_time = now        
+            earliest_start_time = now + timezone.timedelta(minutes=commute_time)
             earliest_end_time = earliest_start_time + timezone.timedelta  (minutes=new_expected_service_time)         
-        elif people_ahead > 0 and current_serving < staff:
-            print("People ahead but staff available, starting immediately after current serving.")
+                    
+        elif que_size < staff: # staff available but customer is not ready yet, so we factor in commute time to calculate waiting time and start time
+            ic("second condition executed")
             waiting_time = 0
-            earliest_start_time = now        
-            earliest_end_time = earliest_start_time + timezone.timedelta(minutes=new_expected_service_time)            
-        else:
-            print("Calculating waiting time...")        
-            
-        earliest_token = (
+            earliest_start_time = now + timezone.timedelta(minutes=commute_time)     
+            earliest_end_time = earliest_start_time + timezone.timedelta  (minutes=new_expected_service_time)
+        else:            
+            ic("third condition executed")
+            earliest_token = (
             Token.objects.select_for_update()
-            .filter(is_occupied=False,branch=branch,status__in=["in_progress"]
-        ).order_by("expected_end_time").first()
-        )
-
-        if earliest_token:
-            earliest_start_time = earliest_token.expected_end_time
-
-        # lock it
-            earliest_token.is_occupied = True
-            earliest_token.save(update_fields=["is_occupied"])
-
+            .filter(is_occupied=False,branch=branch,status__in=['waiting','in_progress'])
+            ).order_by("expected_end_time").first()
+            
+            if earliest_token is not None:
+                earliest_start_time = earliest_token.expected_end_time
+                earliest_end_time = earliest_start_time + timezone.timedelta(minutes=new_expected_service_time)
+                waiting_time = (earliest_start_time - now).total_seconds() / 60
+                earliest_token.is_occupied = True
+                earliest_token.save()
+            else:
+                earliest_token = Token.objects.select_for_update().filter(branch=branch,is_occupied= False, status__in=["waiting"]).order_by("expected_end_time").first()
+                earliest_start_time = earliest_token.expected_end_time
+                earliest_end_time = earliest_start_time + timezone.timedelta(minutes=new_expected_service_time)
+                waiting_time = (earliest_start_time - now).total_seconds() / 60
+                earliest_token.is_occupied = True
+                earliest_token.save()           
+        if waiting_time < 0:
+            messages.error(request, "An error occurred while calculating waiting time. Please try again.")
+            return redirect("customer_dashboard")
+        # Create Token if token.created_at is within branch operating hours
+        if not (branch_opening_time <= now <= branch_closing_time):
+            messages.error(request, "Branch is currently closed. Please try during operating hours.")
+            return redirect("customer_dashboard")
         else:
-            earliest_start_time = timezone.now()
-        earliest_end_time = earliest_start_time + timezone.timedelta(minutes=new_expected_service_time
+            token = Token.objects.create(
+                branch=branch,
+                status="waiting",
+                user = User.objects.get(id =request.user.id ),
+                expected_start_time=earliest_start_time,
+                expected_end_time=earliest_end_time,
+                expected_waiting_time=waiting_time,        
+                expected_service_time=new_expected_service_time,
+                is_occupied=False 
             )
-
-        waiting_time = max(0,(earliest_start_time - timezone.now()).total_seconds() / 60
-        )  
-        # Create Token
-        token = Token.objects.create(
-            branch=branch,
-            status="waiting",
-            user = User.objects.get(id =request.user.id ),
-            expected_start_time=earliest_start_time,
-            expected_end_time=earliest_end_time,
-            expected_waiting_time=waiting_time,        
-            expected_service_time=new_expected_service_time,
-            is_occupied=False 
-        )
         # Link services to token
         for item in cart_items:
             service=item.service
@@ -255,13 +269,170 @@ def token_detail(request, token_id):
     )
 
 def delete_token(request, token_id):
-    token = get_object_or_404(Token, id=token_id)
-    # if token.user != request.user:
-    #     messages.error(request, "You are not authorized to delete this token.")
-    #     return redirect("customer_dashboard", id=token.branch.id)
+    token = get_object_or_404(Token, id=token_id)    
     token.delete()
     messages.success(request, "Token deleted successfully.")
     return redirect("customer_dashboard", id=token.branch.id)
+
+
+
+@transaction.atomic
+def cancel_token(request, token_id):
+    try:
+        # 1. Get the token (only waiting tokens can be cancelled)
+        token = Token.objects.select_for_update().get(
+            id=token_id,
+            status="waiting"
+        )
+
+        branch = token.branch
+
+        # 2. Mark token as cancelled
+        token.status = "cancelled"
+        token.save()
+
+        # 3. Get all waiting tokens of same branch
+        waiting_tokens = list(
+            Token.objects.select_for_update()
+            .filter(branch=branch, status="waiting")
+            .order_by("expected_start_time")
+        )
+
+        # 4. Determine starting point
+        serving_token = Token.objects.filter(
+            branch=branch,
+            status="in_progress"
+        ).order_by("start_time").first()
+
+        if serving_token:
+            prev_end_time = serving_token.expected_end_time
+        else:
+            prev_end_time = timezone.now()
+
+        updated_tokens = []
+
+        # 5. Recalculate queue
+        for t in waiting_tokens:
+            t.expected_start_time = prev_end_time
+            t.expected_end_time = prev_end_time + timedelta(
+                minutes=t.expected_service_time
+            )
+
+            t.expected_waiting_time = max(
+                0,
+                int((t.expected_start_time - timezone.now()).total_seconds() / 60)
+            )
+
+            prev_end_time = t.expected_end_time
+            updated_tokens.append(t)
+
+        # 6. Bulk update
+        Token.objects.bulk_update(
+            updated_tokens,
+            ["expected_start_time", "expected_end_time", "expected_waiting_time"]
+        )
+
+        messages.success(request, "Token cancelled and queue updated successfully")
+
+    except Token.DoesNotExist:
+        messages.error(request, "Only waiting tokens can be cancelled")
+
+    # 🔁 Redirect back to dashboard (adjust URL name if needed)
+    return redirect("customer_home")
+
+@transaction.atomic
+def handle_no_show(request, token_id):
+    try:
+        # 1. Get token (only waiting or serving can be marked no-show)
+        token = Token.objects.select_for_update().get(
+            id=token_id,
+            status__in=["waiting"]
+        )
+
+        branch = token.branch
+
+        # 2. Mark as no-show
+        token.status = "no_show"
+        token.end_time = timezone.now()
+        token.save()
+
+        # 3. Get remaining waiting tokens
+        waiting_tokens = list(
+            Token.objects.select_for_update()
+            .filter(branch=branch, status="waiting")
+            .order_by("expected_start_time")
+        )
+
+        # 4. Determine starting point
+        # If someone else is serving → continue from their end
+        serving_token = Token.objects.filter(
+            branch=branch,
+            status="in_progress"
+        ).exclude(id=token.id).order_by("start_time").first()
+
+        if serving_token:
+            prev_end_time = serving_token.expected_end_time
+        else:
+            # 👇 KEY DIFFERENCE: immediate start after no-show
+            prev_end_time = timezone.now()
+
+        updated_tokens = []
+
+        # 5. Recalculate queue
+        for t in waiting_tokens:
+            t.expected_start_time = prev_end_time
+            t.expected_end_time = prev_end_time + timedelta(
+                minutes=t.expected_service_time
+            )
+
+            t.expected_waiting_time = max(
+                0,
+                int((t.expected_start_time - timezone.now()).total_seconds() / 60)
+            )
+
+            prev_end_time = t.expected_end_time
+            updated_tokens.append(t)
+
+        # 6. Bulk update
+        Token.objects.bulk_update(
+            updated_tokens,
+            ["expected_start_time", "expected_end_time", "expected_waiting_time"]
+        )
+
+        messages.success(request, "Token marked as no-show and queue updated")
+    except Token.DoesNotExist:
+        messages.error(request, "Only waiting  can be marked as no-show")
+        # send notification to impacted customers about reduced waiting time due to no-show
+                   
+        message = f"""
+                Hi {t.user.first_name},
+                We wanted to inform you that there has been a change in the queue at {t.branch.name} which may affect your expected waiting time. A customer with token number {t.token_number} did not show up for their appointment, which has resulted in a shorter wait time for you. Here are your updated details:
+                -------------------------------------------------------------------------------------------
+                Token Number: {t.token_number}
+                Updated Expected Waiting Time: {t.expected_waiting_time:.0f} minutes
+                Updated Expected Start Time: {t.expected_start_time}
+                Updated Expected End Time: {t.expected_end_time}
+                We apologize for any inconvenience and thank you for your understanding. Please feel free to reach out if you have any questions or need further assistance.
+                Thank you!
+                """
+        send_mail(
+                subject="Queue Update Notification",
+                message=message,
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[t.user.email],
+                fail_silently=True, )
+    messages.success(request, f"Token {token.token_number} marked as no-show and impacted customers notified.")        
+            
+    return redirect("shop_dashboard",branch.id)
+         
+def customer_home(request):
+    # branch = get_object_or_404(Branch, id=id)
+    user_tokens = Token.objects.filter(user=request.user).order_by("-created_at")
+    context = {
+        # "branch": branch,
+        "tokens": user_tokens
+    }
+    return render(request, "queues/customer_home.html", context)
 
 @login_required
 def shop_dashboard(request,id):
@@ -273,32 +444,43 @@ def shop_dashboard(request,id):
     ).order_by("token_number")
     total_waiting = tokens.filter(status="waiting").count()
     total_in_progress = tokens.filter(status="in_progress").count()
-    if total_in_progress > 0: 
-        total_waiting_time =tokens.filter(status="in_progress").last().expected_waiting_time 
-    else:
-        total_waiting_time = 0
+    # if total_in_progress > 0: 
+    #     total_waiting_time =tokens.filter(status="in_progress").last().expected_waiting_time 
+    # else:
+    #     total_waiting_time = 0
     token_data = []    
-    
-    for token in tokens:        
-        start_time = token.start_time        
-        expected_start_time = token.expected_start_time
-        waiting_time = token.expected_waiting_time
-        service_time = token.expected_service_time        
-        end_time = start_time + timedelta(minutes=service_time) if start_time else None
+    waiting_time = 0
+    for token in tokens: 
+        expected_start_time = token.expected_start_time       
+        expected_end_time = token.expected_end_time # based on expected start time + service time, not actual end time
+        waiting_time = token.expected_waiting_time       
+        service_time = token.expected_service_time
+        actual_expected_end_time = token.start_time + timedelta(minutes=service_time) if token.start_time else None # Base om actual start time, not expected start time, to reflect real-time changes in queue   
+        # end_time = expected_start_time + timedelta(minutes=service_time)
         
         
         token_data.append({
             "token": token,
             "waiting_time": waiting_time,            
-            "start_time": start_time,
+            "start_time": expected_start_time,
             "service_time":service_time,
-            "end_time": end_time,
-            "expected_start_time": expected_start_time,
+            # "end_time": end_time,
+            "expected_end_time": expected_end_time,
+            "actual_expected_end_time": actual_expected_end_time
         })
-        for token in token_data:
-            ic(token["token"].token_number, token["waiting_time"], token["service_time"], token["end_time"])
+        now= timezone.now()
+        context={
+            'popup_promo': Promotion.objects.filter(
+            slot='popup', start_date__lte=now, end_date__gte=now, is_active=True
+        ).first(),
+        
+        'hero_promo': Promotion.objects.filter(
+            slot='hero', start_date__lte=now, end_date__gte=now, is_active=True
+        ).first(),
+            }
+        
     return render(request, "queues/shop_dashboard.html", {
-        "token_data": token_data,"total_waiting": total_waiting,"total_in_progress": total_in_progress,"total_wait_time": total_waiting_time
+        "token_data": token_data,"total_waiting": total_waiting,"total_in_progress": total_in_progress,"total_wait_time": waiting_time,"context":context
     })
 @login_required
 def start_service(request, token_id):
@@ -337,5 +519,4 @@ def end_service(request, token_id):
 
     messages.success(request, f"Completed Token {token.token_number}")
     return redirect("shop_dashboard" ,id=branch_id)
-
 

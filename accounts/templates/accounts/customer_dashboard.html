@@ -1,42 +1,57 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
-
-<div class="container-fluid">
-    <div class="row">
-
-<!-- Sidebar -->
-        <div class="col-md-3 bg-light">
-
-            <h4 class="mt-3">Service Categories</h4>
-
-                <ul class="list-group">
-
-                    {% for category in categories %}
-
-                        <li class="list-group-item">
-                            <a href="{% url 'customer_dashboard'  %}">
-                               <a href="{% url 'services_list' category.id %}">{{ category.name }}</a>
-                            </a>
-                        </li>
-
-                    {% endfor %}
-
-                </ul>
-
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h2 class="fw-bold mb-1">Welcome, {{ user.first_name|default:user.username }}! 👋</h2>
+            <p class="text-muted">What service are you looking for today?</p>
         </div>
+        <a href="{% url 'customer_home' %}" class="btn btn-primary btn-lg rounded-pill shadow-sm px-4">
+            <i class="bi bi-calendar-check me-2"></i>View My Bookings
+        </a>
+    </div>
 
-
-            <!-- Main Content -->
-        <div class="col-md-9">
-
-            <h3 class="mt-3">Select a service category</h3>
-            <p>Choose a category from the left sidebar to see providers.</p>
-
+    <h4 class="fw-bold mb-4">Service Categories</h4>
+    <div class="row g-4">
+        {% for category in categories %}
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="{% url 'services_list' category.id %}" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition">
+                    <div class="bg-primary-subtle d-flex align-items-center justify-content-center" style="height: 160px;">
+                        <span style="font-size: 3rem;">
+                            {% if "Hospital" in category.name %}🏥
+                            {% elif "Laundary" in category.name %}🧺
+                            {% elif "Grooming" in category.name %}✂️
+                            {% elif "SPA" in category.name %}🧖
+                            {% else %}✨{% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="card-body p-4 text-center">
+                        <h5 class="fw-bold text-dark mb-2">{{ category.name }}</h5>
+                        <p class="small text-muted mb-0">Book your slot instantly</p>
+                    </div>
+                    
+                    <div class="card-footer bg-white border-0 pb-4 text-center">
+                        <span class="btn btn-outline-primary btn-sm rounded-pill px-4">Browse</span>
+                    </div>
+                </div>
+            </a>
         </div>
-
-
+        {% endfor %}
+    </div>
 </div>
-</div>
-
+<style>
+    /* Modern Hover Effect */
+    .hover-lift {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .hover-lift:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 1rem 3rem rgba(0,0,0,.1) !important;
+    }
+    .transition { transition: all 0.3s ease; }
+</style>
 {% endblock %}

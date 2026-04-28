@@ -15,4 +15,8 @@ urlpatterns = [
     path("start_service/<int:token_id>/", start_service, name="start_service"),
     path("end_service/<int:token_id>/", end_service, name="end_service"),
     path("delete_token/<int:token_id>/", delete_token, name="delete_token"),
+    path('cancel_token/<int:token_id>/',cancel_token, name='cancel_token'),
+    path('handle_no_show/<int:token_id>/', handle_no_show, name='handle_no_show'),
+    path("customer_home/", customer_home, name="customer_home"),
+ 
 ]

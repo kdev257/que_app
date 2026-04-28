@@ -49,7 +49,7 @@ class Token(models.Model):
         ('cancelled', 'Cancelled'),
         ('no_show', 'No Show'),
     ]    
-    # queue = models.ForeignKey(Queue,on_delete=models.CASCADE)
+    
     branch = models.ForeignKey(Branch,on_delete=models.CASCADE,default=1)
     user = models.ForeignKey(User,on_delete=models.CASCADE)
     token_number = models.IntegerField(default=0)
@@ -63,15 +63,18 @@ class Token(models.Model):
     waiting_time = models.IntegerField(null=True, blank=True)  # actual WT in minutes
     expected_service_time = models.IntegerField(null=True, blank=True)  # in minutes
     actual_service_time = models.IntegerField(null=True, blank=True)  # in minutes
-    is_occupied = models.BooleanField(default=False)
+    is_occupied = models.BooleanField(default=False) # We ensure that a token is allocated only once. so by default it is false and when we allocate next based earliest expected end time  token to a customer we set it to true.
 
     def __str__(self):
         return f"Token {self.token_number} for {self.user.username} at {self.branch.name} - {self.expected_service_time} mins"
    
+    
     def generate_token_number(self):
+        today = timezone.localdate()  # safer than date.today() with timezones
+
         last_token = (
             Token.objects
-            .filter(branch=self.branch)
+            .filter(branch=self.branch, created_at__date=today)
             .aggregate(max_num=Max("token_number"))
         )
 
@@ -96,3 +99,6 @@ class TokenService(models.Model):
 
     def __str__(self):
         return f" {self.token.token_number} - {self.service} {self.branch}"
+    
+    
+

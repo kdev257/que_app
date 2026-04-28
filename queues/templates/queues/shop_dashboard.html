@@ -1,271 +1,167 @@
 {% extends "base.html" %}
-{%load crispy_forms_tags %}
-
+{% load crispy_forms_tags %}
 {% load static %}
 
 {% block content %}
+<div class="container-fluid py-4" style="background: #f8f9fa; min-height: 100vh;">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">🚀 Staff Command Center</h2>
+        <div class="text-end">
+            <span class="badge bg-dark px-3 py-2 rounded-pill">Branch: {{ user.user_profile.organization }}</span>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 border-start border-warning border-5">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted small text-uppercase fw-bold mb-1">In Queue</h6>
+                        <h2 class="mb-0 fw-bold text-warning">{{ total_waiting }}</h2>
+                    </div>
+                    <i class="bi bi-people fs-1 text-warning opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 border-start border-primary border-5">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted small text-uppercase fw-bold mb-1">Currently Serving</h6>
+                        <h2 class="mb-0 fw-bold text-primary">{{ total_in_progress }}</h2>
+                    </div>
+                    <i class="bi bi-scissors fs-1 text-primary opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 border-start border-info border-5">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted small text-uppercase fw-bold mb-1">Avg. Wait Time</h6>
+                        <h2 class="mb-0 fw-bold text-info">{{ total_wait_time }} <small class="fs-6">min</small></h2>
+                    </div>
+                    <i class="bi bi-clock-history fs-1 text-info opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-dark text-white">
+                    <tr>
+                        <th class="ps-4">Token</th>
+                        <th>Customer / Services</th>
+                        <th>Status</th>
+                        <th>Timing (Wait/Service)</th>
+                        <th>Estimated Schedule</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in token_data %}
+                    {% with token=item.token %}
+                    <tr class="{% if token.status == 'in_progress' %}table-primary{% endif %}">
+                        <td class="ps-4">
+                            <div class="display-6 fw-bold text-dark">#{{ token.token_number }}</div>
+                            <small class="text-muted">{{ token.created_at|time:"H:i" }}</small>
+                        </td>
+
+                        <td>
+                            <span class="fw-bold d-block text-primary">Token Holder</span>
+                            <small class="text-muted">Services logic here...</small>
+                        </td>
+
+                        <td>
+                            <span class="badge rounded-pill px-3 py-2 
+                                {% if token.status == 'waiting' %}bg-warning-subtle text-warning border border-warning
+                                {% elif token.status == 'in_progress' %}bg-primary text-white
+                                {% else %}bg-success-subtle text-success{% endif %}">
+                                {{ token.status|upper }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <div class="small mb-1">
+                                <i class="bi bi-hourglass-split text-warning"></i> 
+                                Wait: <strong>{{ item.waiting_time|floatformat:0 }}m</strong>
+                            </div>
+                            <div class="small">
+                                <i class="bi bi-stopwatch text-info"></i> 
+                                Work: <strong>{{ item.service_time }}m</strong>
+                            </div>
+                        </td>
+
+                        <td>
+                            <div class="small">Start: <strong>{{ token.expected_start_time|date:"H:i" }}</strong></div>
+                            <div class="small">End: <strong>{{ item.actual_expected_end_time|default:"-"|date:"H:i" }}</strong></div>
+                        </td>
+
+                        <td class="text-end pe-4">
+                            {% if token.status == "in_progress" %}
+                                <a href="{% url 'end_service' token.id %}" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm">
+                                    <i class="bi bi-check2-circle me-1"></i> Finish
+                                </a>
+                            {% elif token.status == "waiting" %}
+                                <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+                                    <a href="{% url 'start_service' token.id %}" class="btn btn-primary px-3">
+                                        <i class="bi bi-play-fill"></i> Start
+                                    </a>
+                                    <a href="{% url 'handle_no_show' token.id %}" class="btn btn-warning px-3" onclick="return confirm('Mark as No-Show?')">
+                                        <i class="bi bi-person-x"></i>
+                                    </a>
+                                    <a href="{% url 'delete_token' token.id %}" class="btn btn-danger px-3" onclick="return confirm('Delete Token?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endwith %}
+                {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                            Queue is empty.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="promotion-holder mb-4"> 
+    {% if hero_promo %}
+        <div class="card bg-dark text-white border-0 shadow" style="min-height: 150px;">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h2 class="h4">{{ hero_promo.title }}</h2>
+                    <a href="{{ hero_promo.link }}" class="btn btn-warning btn-sm">Claim Now</a>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="card border-secondary bg-light" style="border-style: dashed !important; opacity: 0.7;">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-plus-circle h3 text-muted"></i>
+                <p class="mb-1 fw-bold">Promote your Salon Service here!</p>
+                <a href="{% url 'create_promotion' %}" class="btn btn-outline-primary btn-sm">Book this Slot</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
 
 <style>
-/* =========================
-   GLOBAL
-========================= */
-body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: #f5f7fb;
-    color: #2c3e50;
-}
-
-/* =========================
-   CONTAINER
-========================= */
-.container-fluid {
-    width: 100%;
-    padding: 15px 20px;
-}
-
-/* =========================
-   HEADER
-========================= */
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.dashboard-title {
-    font-size: 22px;
-    font-weight: 600;
-}
-
-/* =========================
-   SUMMARY CARDS
-========================= */
-.summary {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.card {
-    flex: 1;
-    background: white;
-    padding: 15px;
-    border-radius: 12px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
-    text-align: center;
-}
-
-.card h3 {
-    margin: 0;
-    font-size: 22px;
-}
-
-.card p {
-    margin: 5px 0 0;
-    font-size: 13px;
-    color: #777;
-}
-
-/* =========================
-   TABLE
-========================= */
-.table-dashboard {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-.table-dashboard th {
-    background: #1f2d3d;
-    color: white;
-    padding: 14px;
-    font-size: 13px;
-}
-
-.table-dashboard td {
-    padding: 14px;
-    border-bottom: 1px solid #eee;
-}
-
-.table-dashboard tr:hover {
-    background: #f9fbff;
-}
-
-/* =========================
-   STATUS COLORS
-========================= */
-.waiting {
-    background: #fff8e1;
-}
-
-.in_progress {
-    background: #e3f2fd;
-}
-
-.completed {
-    background: #e8f5e9;
-}
-
-/* =========================
-   BADGES
-========================= */
-.badge {
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.badge-waiting {
-    background: #ffe082;
-}
-
-.badge-progress {
-    background: #64b5f6;
-    color: white;
-}
-
-.badge-done {
-    background: #81c784;
-    color: white;
-}
-
-/* =========================
-   BUTTONS
-========================= */
-.btn {
-    padding: 8px 14px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-.btn-start {
-    background: #2196f3;
-    color: white;
-}
-
-.btn-end {
-    background: #4caf50;
-    color: white;
-}
-
-.btn:hover {
-    opacity: 0.9;
-}
-
-/* =========================
-   NOW SERVING
-========================= */
-.now-serving {
-    color: #e53935;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-/* =========================
-   MOBILE
-========================= */
-@media (max-width: 768px) {
-    .summary {
-        flex-direction: column;
-    }
-
-    .table-dashboard {
-        display: block;
-        overflow-x: auto;
-    }
-}</style>
-
-<div class="container-fluid px-3">
-<div class="dashboard-header">
-    <div class="dashboard-title">💈 Salon Dashboard</div>
-</div>
-
-<div class="summary">
-    <div class="card text-warning" style="background: #fff8e1;">
-        <h3>{{ total_waiting }}</h3>
-        <p class="card-text text-warning">Waiting</p>
-    </div>
-    <div class="card text-success" style="background: #e8f5e9;">
-        <h3>{{ total_in_progress }}</h3>
-        <p class="card-text text-success">In Progress</p>
-    </div>
-    <div class="card text-info" style="background: #e3f2fd;">
-        <h3>{{ total_wait_time }} min</h3>
-        <p class="card-text text-info">Avg Wait</p>
-    </div>
-</div>
-<table class="table-dashboard">
-    
-    <thead>
-        <tr>
-            <th>Token No</th>
-            <th>Status</th>
-            <th>Waiting Time</th>
-            <th>Service Time</th>
-            <th>Expected Start</th>
-            <th>Actual Start</th>
-            <th>Expected End</th>
-            <th>Actual End</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-
-    <tbody>
-    {% for item in token_data %}
-        {% with token=item.token %}
-        <tr class="{{ token.status }}">
-
-            <td><strong>#{{ token.token_number }}</strong></td>
-
-            <td>
-                {% comment %} {{ token.status|title }} {% endcomment %}
-                <span class="badge 
-                    {% if token.status == 'waiting' %}badge-waiting
-                    {% elif token.status == 'in_progress' %}badge-progress
-                    {% else %}badge-done{% endif %}">
-                    {{ token.status|title }}
-                    </span>
-            </td>
-
-            <td>{{ item.waiting_time|floatformat:0 }} min</td>
-            <td>{{ item.service_time }} min</td>
-
-            <td>{{ item.expected_start_time|date:"H:i" }}</td>
-            <td>{{ item.start_time|default:"-"|date:"H:i" }}</td>
-
-            <td>{{ item.end_time|default:"-"|date:"H:i" }}</td>
-            <td>{{ item.actual_end_time|default:"-"|date:"H:i" }}</td>
-
-            <td>
-                
-                     {% if token.status == "in_progress" %}
-                    <button class="btn btn-end"><a href="{% url 'end_service' token.id %}">✔ End</a></button>
-
-                {% else %}
-                    <button class="btn btn-start"><a href="{% url 'start_service' token.id %}">▶ Start</a></button>
-                    <button class="btn btn-danger"><a href="{% url 'delete_token' token.id %}" onclick="return confirm('Are you sure you want to delete this token?')">✖ Delete</a></button>
-                    
-                {% endif %} 
-            </td>
-
-        </tr>
-        {% endwith %}
-    {% empty %}
-        <tr>
-            <td colspan="9" style="text-align:center;">No tokens available</td>
-        </tr>
-    {% endfor %}
-    </tbody>
-
-</table>
-
-</div>
-
+    /* Fixed the button links so they don't look like purple underlines */
+    .btn a { color: inherit; text-decoration: none; display: block; }
+    .table-hover tbody tr:hover { background-color: rgba(13, 110, 253, 0.05); }
+    .display-6 { font-size: 1.8rem; }
+    .bg-warning-subtle { background-color: #fff3cd; }
+    .bg-success-subtle { background-color: #d1e7dd; }
+</style>
 {% endblock %}

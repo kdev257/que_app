@@ -5,6 +5,7 @@ from django.shortcuts import redirect
 from .models import User,UserProfile
 from .forms import CustomAuthenticationForm,UserProfileForm,Registrationform
 from django.contrib.auth import login,authenticate
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from icecream import ic
 
@@ -57,25 +58,26 @@ def user_login(request):
         fm=CustomAuthenticationForm()
     return render(request,'login/login.html',{'form':fm}) 
 
+@login_required 
 def user_profile(request):
-
-    profile, created = UserProfile.objects.get_or_create(user=request.user)
-
-    if request.method == "POST":
-        form = UserProfileForm(request.POST, request.FILES, instance=profile)
-
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Your profile has been updated successfully.")
-            return redirect("customer_dashboard")
-
-        messages.error(request, "Please correct the errors below.")
-
+    user = request.user 
+    if user.is_authenticated:
+        profile = request.user.user_profile
+        if request.method == 'POST':
+            # Pass user here for POST
+            form = UserProfileForm(request.POST, request.FILES, instance=profile, user=request.user)
+            if form.is_valid():
+                form.save()
+                return redirect('user_login')
+        else:
+        # Pass user here for GET (This is where your current error is)
+            form = UserProfileForm(instance=profile, user=request.user)
     else:
-        form = UserProfileForm(instance=profile)
-    return render(request, "login/profile.html", {"form": form})
+        messages.error(request,'You are not authorized to access this page')
+    
+    return render(request, 'login/profile.html', {'form': form})
 
 def logout_view(request):
     logout(request)
     messages.success(request, 'You have been logged out successfully.')
-    return redirect('user_login')    
+    return redirect('/')    

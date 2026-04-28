@@ -1,52 +1,99 @@
 {% extends "base.html" %}
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
 {% block content %}
-    <h2>Services Menu : {{branch}}</h2> <br>
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'customer_dashboard' %}" class="text-decoration-none">Categories</a></li>
+                    <li class="breadcrumb-item active">Service Menu</li>
+                </ol>
+            </nav>
+            <h2 class="fw-bold mt-2">Menu: <span class="text-primary">{{ branch }}</span></h2>
+            <p class="text-muted">Select the services you'd like to book today.</p>
+        </div>
+    </div>
 
-    <table class="table table-striped">
-        <thead>
-            <tr>                
-                <th>Service Name</th>
-                <th>Price</th>
-                <th>Select Service</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% comment %} {% for service in services %}
-            <tr>                
-                <td>{{ service.name }}</td>
-                <td> Rs.{{ service.price }}</td>
-                <td><input type="checkbox" name="services" value="{{ service.id }}"></td>
-                
-            </tr>
-            {% endfor %} {% endcomment %}
-            <form method="POST" action="{% url 'add_to_cart' %}">
-            {% csrf_token %}
+    <form method="POST" action="{% url 'add_to_cart' %}">
+        {% csrf_token %}
+        
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4" style="width: 80px;">Select</th>
+                            <th>   </th>
+                            <th>Service Name</th>
+                            <th class="text-end pe-4">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tbody>
+                    {% for service in services %}
+                <tr>
+                    <td class="ps-4">
+                        <div class="form-check">
+                            <input class="form-check-input service-checkbox" type="checkbox" name="services" value="{{ service.id }}" id="service_{{ service.id }}">
+                        </div>
+                    </td>
+                    
+                    <td class="text-center" style="width: 60px;">
+                        <div class="rounded-3 bg-light d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                            <i class="bi 
+                                {% if 'Cut' in service.name or 'Trim' in service.name %}bi-scissors text-danger
+                                {% elif 'Color' in service.name or 'Heena' in service.name %}bi-brush text-primary
+                                {% elif 'Wash' in service.name or 'Shampoo' in service.name %}bi-droplet-half text-info
+                                {% elif 'Facial' in service.name or 'SPA' in service.name %}bi-stars text-warning
+                                {% elif 'Shave' in service.name or 'Beard' in service.name %}bi-razor text-secondary
+                                {% elif 'Massage' in service.name %}bi-hand-index-thumb text-success
+                                {% else %}bi-card-list text-muted{% endif %}" 
+                                style="font-size: 1.4rem;">
+                        </div>
+                    </td>
 
-            <table class="table">
+                    <td>
+                        <label class="fw-bold d-block text-dark mb-0" for="service_{{ service.id }}" style="cursor: pointer;">
+                            {{ service.name }}
+                        </label>
+                        <small class="text-muted">
+                            <i class="bi bi-clock small"></i> 30-45 mins
+                        </small>
+                    </td>
 
-            {% for service in services %}
+                    <td class="text-end pe-4">
+                        <span class="badge bg-success-subtle text-success fs-6 fw-bold px-3 py-2 rounded-pill">
+                            ₹{{ service.price }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+            
+            <div class="card-footer bg-white border-top p-4 d-flex justify-content-between align-items-center">
+                <div class="text-start">
+                    <span class="text-muted small d-block">Selected Items</span>
+                    <h5 class="mb-0 fw-bold"><span id="selected-count">0</span> Services Total</h5>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm">
+                    Add to Cart <i class="bi bi-cart-plus ms-2"></i>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
 
-            <tr>
-
-            <td>
-            <input type="checkbox" name="services" value="{{ service.id }}">
-            </td>
-
-            <td>{{ service.name }}</td>
-
-            <td>{{ service.price }}</td>
-
-            </tr>
-
-            {% endfor %}
-
-            </table>
-
-            <button type="submit" class="btn btn-primary">
-            Add Selected Services
-            </button>
-
-            </form>
-        </tbody>
-    </table>
+<script>
+    document.querySelectorAll('.service-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const count = document.querySelectorAll('.service-checkbox:checked').length;
+            document.getElementById('selected-count').innerText = count;
+        });
+    });
+</script>
 {% endblock %}

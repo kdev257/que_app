@@ -1,44 +1,128 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb justify-content-center">
+                    <li class="breadcrumb-item"><a href="{% url 'customer_dashboard' %}" class="text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item active">Your Token</li>
+                </ol>
+            </nav>
 
-<div class="container">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                
+                <div class="card-header bg-primary text-white text-center py-4 border-0">
+                    <h5 class="text-uppercase mb-1 fw-bold" style="letter-spacing: 1px; opacity: 0.9;">
+                        {% if user.first_name %}{{ user.first_name }}{% else %}{{ user.username }}{% endif %}'s Token
+                    </h5>
+                    <div class="display-1 fw-bold mb-0" style="font-size: 5.5rem; line-height: 1;">
+                        #{{ token.token_number }}
+                    </div>
+                    <p class="mt-2 mb-0 fw-medium">
+                        <i class="bi bi-geo-alt-fill me-1"></i> {{ token.branch }}
+                    </p>
+                </div>
 
-<h2>Your Token Details</h2>
+                <div class="card-body p-4">
+                    
+                    <div class="row text-center mb-4 g-2">
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Now Serving</small>
+                                <span class="h4 fw-bold text-primary">{{ current_serving|default:"--" }}</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">People Ahead</small>
+                                <span class="h4 fw-bold text-danger">{{ people_ahead }}</span>
+                            </div>
+                        </div>
+                    </div>
 
-<div class="card p-3">
+                    <div class="list-group list-group-flush mb-4">
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <i class="bi bi-hourglass-split text-warning me-2"></i>
+                                <span class="text-muted">Wait Time</span>
+                            </div>
+                            <span class="fw-bold">{{ token.expected_waiting_time }} mins</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <i class="bi bi-clock-history text-success me-2"></i>
+                                <span class="text-muted">Expected Start</span>
+                            </div>
+                            <span class="fw-bold">{{ token.expected_service_time|time:"H:i" }}</span>
+                        </div>
+                    </div>
 
-<h3>Token Number: {{ token.token_number }}</h3>
+                    <hr style="border-top: 2px dashed #dee2e6; opacity: 1;">
 
-<p><strong>Branch:</strong> {{ token.branch }}</p>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0"><i class="bi bi-card-checklist me-2"></i>Services Selected</h6>
+                            <span class="badge bg-primary-subtle text-primary rounded-pill px-3">{{ services|length }} Items</span>
+                        </div>
+                        
+                        <div class="bg-light rounded-3 p-3">
+                            {% for item in services %}
+                            <div class="d-flex justify-content-between {% if not forloop.last %}mb-2 border-bottom pb-2{% endif %}">
+                                <div>
+                                    <span class="text-dark fw-semibold d-block">{{ item.service.name }}</span>
+                                    <small class="text-muted" style="font-size: 0.75rem;">Professional Treatment</small>
+                                </div>
+                                <span class="fw-bold text-dark">₹{{ item.service.price }}</span>
+                            </div>
+                            {% endfor %}
+                            
+                            {% comment %} <div class="d-flex justify-content-between mt-3 pt-2 border-top border-secondary border-opacity-25">
+                                <span class="fw-bold">Total Bill</span>
+                                <span class="fw-bold text-success">₹{{ total_price|default:token.total_price }}</span>
+                            </div> {% endcomment %}
+                        </div>
+                    </div>
 
-<p><strong>Date:</strong> {{ token.created_at}}</p>
+                    <div class="d-grid gap-2">
+                        <button onclick="window.print()" class="btn btn-outline-dark rounded-pill py-2">
+                            <i class="bi bi-printer me-2"></i>Download / Print Token
+                        </button>
+                        <a href="{% url 'customer_dashboard' %}" class="btn btn-link text-decoration-none text-muted small">
+                            Return to Homepage
+                        </a>
+                    </div>
+                </div>
 
-<hr>
-
-<h4>Services Selected</h4>
-
-<ul>
-{% for item in services %}
-<li>
-{{ item.service }} — Rs. {{ item.service.price }}
-</li>
-{% endfor %}
-</ul>
-
-<hr>
-
-<h4>Queue Status</h4>
-
-<p>Current Serving: <strong>{{ current_serving }}</strong></p>
-
-<p>People Ahead: <strong>{{ people_ahead }}</strong></p>
-<p>Waiting Time: <strong>{{ token.expected_waiting_time }}</strong></p>
-<p>Expected Service Time: <strong>{{ token.expected_service_time }}</strong></p>
-<p></p>
-
+                <div class="card-footer bg-light text-center py-3 border-0">
+                    <small class="text-muted">
+                        Booked: {{ token.created_at|date:"M d, Y" }} at {{ token.created_at|time:"H:i" }}
+                    </small>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <div class="alert alert-info border-0 rounded-4 shadow-sm py-2">
+                    <small><i class="bi bi-info-circle-fill me-1"></i> Please show this screen at the reception desk.</small>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-</div>
-
+<style>
+    /* Styling for the Primary Theme colors if not already in your CSS */
+    .bg-primary-subtle { background-color: #e7f1ff !important; }
+    .text-primary { color: #0d6efd !important; }
+    .card { transition: all 0.3s ease; }
+    
+    /* Ensure the print button only shows on screen */
+    @media print {
+        .btn, .breadcrumb, .alert { display: none !important; }
+        .container { margin-top: 0 !important; }
+        .card { shadow: none !important; border: 1px solid #eee !important; }
+    }
+</style>
 {% endblock %}
