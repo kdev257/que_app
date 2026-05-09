@@ -56,9 +56,15 @@
                                 <i class="bi bi-clock-history text-success me-2"></i>
                                 <span class="text-muted">Expected Start</span>
                             </div>
-                            <span class="fw-bold">{{ token.expected_service_time|time:"H:i" }}</span>
+                            <span class="fw-bold">{{ token.expected_start_time|time:"H:i" }}</span>
                         </div>
-                    </div>
+
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <i class="bi bi-clock-fill text-danger me-2"></i> <span class="text-muted">Expected End</span>
+                            </div>
+                            <span class="fw-bold">{{ token.expected_end_time|time:"H:i" }}</span>
+                        </div>
 
                     <hr style="border-top: 2px dashed #dee2e6; opacity: 1;">
 
@@ -88,7 +94,7 @@
 
                     <div class="d-grid gap-2">
                         <button onclick="window.print()" class="btn btn-outline-dark rounded-pill py-2">
-                            <i class="bi bi-printer me-2"></i>Download / Print Token
+                            {% comment %} <i class="bi bi-printer me-2"></i>Download / Print Token {% endcomment %}
                         </button>
                         <a href="{% url 'customer_dashboard' %}" class="btn btn-link text-decoration-none text-muted small">
                             Return to Homepage
@@ -102,6 +108,23 @@
                     </small>
                 </div>
             </div>
+            <div class="mt-4 p-3 bg-light rounded-3 border">
+    <h6 class="fw-bold text-dark mb-2" style="font-size: 0.85rem;">
+        <i class="bi bi-info-circle-fill me-1"></i> Terms & Disclaimers
+    </h6>
+    <ul class="text-muted mb-0" style="font-size: 0.75rem; line-height: 1.4;">
+        <li class="mb-1"><strong>Estimates Only:</strong> Wait times and "Expected Start" times are automated estimates and are not guaranteed. Actual times may vary based on service complexity.</li>
+        <li class="mb-1"><strong>Arrival Policy:</strong> Please arrive 5 minutes before your expected start time. Late arrivals may result in the automatic cancellation of your token.</li>
+        <li class="mb-1"><strong>Right to Refuse:</strong> The management reserves the right to adjust the queue or cancel tokens due to technical issues, staff availability, or unforeseen circumstances.</li>
+        <li><strong>Non-Refundable:</strong> Token bookings are subject to the branch's specific refund and cancellation policies.</li>
+    </ul>
+</div>
+
+<div class="d-grid gap-2 mt-4">
+    <a href="#" class="btn btn-outline-dark rounded-pill shadow-sm">
+        <i class="bi bi-printer me-2"></i> Download / Print Token
+    </a>
+</div>
             
             <div class="text-center mt-4">
                 <div class="alert alert-info border-0 rounded-4 shadow-sm py-2">

@@ -18,5 +18,7 @@ urlpatterns = [
     path('cancel_token/<int:token_id>/',cancel_token, name='cancel_token'),
     path('handle_no_show/<int:token_id>/', handle_no_show, name='handle_no_show'),
     path("customer_home/", customer_home, name="customer_home"),
+    path("open_branch/<int:branch_id>/", open_branch, name="open_branch"),
+    path("close_branch/<int:branch_id>/", close_branch, name="close_branch"),
  
 ]

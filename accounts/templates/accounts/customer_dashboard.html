@@ -8,9 +8,14 @@
             <h2 class="fw-bold mb-1">Welcome, {{ user.first_name|default:user.username }}! 👋</h2>
             <p class="text-muted">What service are you looking for today?</p>
         </div>
-        <a href="{% url 'customer_home' %}" class="btn btn-primary btn-lg rounded-pill shadow-sm px-4">
-            <i class="bi bi-calendar-check me-2"></i>View My Bookings
-        </a>
+        <div class="d-flex justify-content-center gap-3 my-4">
+    <a href="{% url 'customer_home' %}" class="btn btn-primary btn-lg rounded-pill shadow-sm px-4">
+        <i class="bi bi-calendar-check me-2"></i>View My Bookings
+    </a>
+    <a href="{% url 'user_profile' %}" class="btn btn-primary btn-lg rounded-pill shadow-sm px-4">
+        <i class="bi bi-person-circle me-2"></i>View My Profile
+    </a>
+</div>
     </div>
 
     <h4 class="fw-bold mb-4">Service Categories</h4>

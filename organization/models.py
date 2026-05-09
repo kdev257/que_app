@@ -1,3 +1,5 @@
+import datetime
+
 from django.db import models
 from django.core.exceptions import ValidationError
 # Create your models here.
@@ -29,8 +31,9 @@ class Branch(models.Model):
     phone = models.CharField(max_length=20, blank=True, null=True,help_text="recommended to be filled accurately for better service matching")
     email = models.EmailField(blank=True, null=True,help_text="recommended to be filled accurately so that customers can contact in case of any issues")
     number_of_employees = models.IntegerField(blank=True, null=True,help_text="recommended to be filled accurately to calculate average waiting time for services",default=1)
-    opening_time = models.TimeField(blank=True, null=True,help_text="recommended to be filled accurately so that user can know when the branch opens while booking for service")
-    closing_time = models.TimeField(blank=True, null=True,help_text="recommended to be filled accurately so that user can know when the branch closes while booking for service")
+    opening_time = models.TimeField(default=datetime.time(8, 0),blank=True,null=True,help_text="Format: 8:00 AM" )    
+    closing_time = models.TimeField(default=datetime.time(21, 0),blank=True,null=True,help_text="Format: 9:00 PM" )
+    is_open = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["name"]
@@ -38,6 +41,11 @@ class Branch(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.organization.name}"
+    
+    def clean(self):
+        if self.opening_time and self.closing_time:
+            if self.opening_time >= self.closing_time:
+                raise ValidationError("Closing time must be after opening time.")
 
 
 
