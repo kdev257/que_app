@@ -33,6 +33,15 @@
                         <label class="text-muted small text-uppercase fw-bold ls-1">Branch Location</label>
                         <p class="mb-0 text-dark fw-semibold">
                             <i class="bi bi-geo-alt-fill text-primary me-1"></i> {{ service.name }}
+                            {% comment %} {% if waiting_time %}
+                                <span class="badge bg-light text-danger rounded-pill ms-2">
+                                    <i class="bi bi-clock-fill me-1"></i> {{ waiting_time }} mins
+                                </span>
+                            {% else %}
+                                <span class="badge bg-light text-success rounded-pill ms-2">
+                                    <i class="bi bi-check-circle-fill me-1"></i> No Wait
+                                </span>
+                            {% endif %} {% endcomment %}
                         </p>
                     </div>
 

@@ -6,18 +6,49 @@
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
+            <nav aria-label="breadcrumb" class="d-flex justify-content-between align-items-center">
+                <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a href="{% url 'customer_dashboard' %}" class="text-decoration-none">Categories</a></li>
                     <li class="breadcrumb-item active">Service Menu</li>
                 </ol>
+                
+                <div class="d-flex gap-2">
+                    <button class='est-wait-badge' 
+                            data-bs-toggle="tooltip" 
+                            data-bs-placement="top" 
+                            title="The time you will likely wait based booking time and earliest person available to serve.">
+                            <i class="bi bi-clock-history me-1"></i>
+                        Est. Wait: {{ waiting_time|default_if_none:"0"|floatformat:0 }} mins
+                    </button>
+
+                    {% if queue_delay > 0 %}
+                    <button class='btn btn-outline-danger' 
+                            data-bs-toggle="tooltip" 
+                            data-bs-placement="top" 
+                            title="The saloon is currently running {{ queue_delay|floatformat:0 }} mins behind schedule.">
+                            <i class="bi bi-clock-history me-1"></i>
+                        Current Delay: {{ queue_delay|floatformat:0 }} mins
+                    </button>
+                    {% endif %}
+                    {% if is_open %}
+                        <span class="status-pill status-open">
+                            <span class="status-dot"></span> Open
+                        </span>
+                    {% else %}
+                        <span class="status-pill status-closed">
+                            <span class="status-dot"></span>Pre-Booking
+                        </span>
+                    {% endif %}
+                </div>
             </nav>
-            <h2 class="fw-bold mt-2">Menu: <span class="text-primary">{{ branch }}</span></h2>
+
+            <h2 class="fw-bold mt-4">Menu: <span class="text-primary">{{ branch }}</span></h2>
             <p class="text-muted">Select the services you'd like to book today.</p>
         </div>
     </div>
+</div>
 
-    <form method="POST" action="{% url 'add_to_cart' %}">
+ <form method="POST" action="{% url 'add_to_cart' %}">
         {% csrf_token %}
         
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
@@ -32,68 +63,173 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tbody>
-                    {% for service in services %}
-                <tr>
-                    <td class="ps-4">
-                        <div class="form-check">
-                            <input class="form-check-input service-checkbox" type="checkbox" name="services" value="{{ service.id }}" id="service_{{ service.id }}">
-                        </div>
-                    </td>
-                    
-                    <td class="text-center" style="width: 60px;">
-                        <div class="rounded-3 bg-light d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
-                            <i class="bi 
-                                {% if 'Cut' in service.name or 'Trim' in service.name %}bi-scissors text-danger
-                                {% elif 'Color' in service.name or 'Heena' in service.name %}bi-brush text-primary
-                                {% elif 'Wash' in service.name or 'Shampoo' in service.name %}bi-droplet-half text-info
-                                {% elif 'Facial' in service.name or 'SPA' in service.name %}bi-stars text-warning
-                                {% elif 'Shave' in service.name or 'Beard' in service.name %}bi-razor text-secondary
-                                {% elif 'Massage' in service.name %}bi-hand-index-thumb text-success
-                                {% else %}bi-card-list text-muted{% endif %}" 
-                                style="font-size: 1.4rem;">
-                        </div>
-                    </td>
+                        {% comment %} <tbody>
+                    <tbody> {% endcomment %}
+    {% for service in services %}
+    <tr>
+        <td class="ps-4">
+            <div class="form-check">                            
+                <input class="form-check-input service-checkbox" 
+                       style="border: 2px solid #007bff;" 
+                       type="checkbox" 
+                       name="services" 
+                       value="{{ service.id }}" 
+                       id="service_{{ service.id }}"
+                       data-price="{{ service.price }}"> </div>
+        </td>
+        
+        <td class="text-center" style="width: 60px;">
+            <div class="rounded-3 bg-light d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                <i class="bi 
+                    {% if 'Hair Cut' in service.name or 'Trim' in service.name %}bi-scissors text-primary
+                    {% elif 'Color' in service.name %}bi-brush text-primary
+                    {% elif 'Wash' in service.name %}bi-droplet-half text-info
+                    {% else %}bi-card-list text-muted{% endif %}" 
+                    style="font-size: 1.4rem;"></i>
+            </div>
+        </td>
 
-                    <td>
-                        <label class="fw-bold d-block text-dark mb-0" for="service_{{ service.id }}" style="cursor: pointer;">
-                            {{ service.name }}
-                        </label>
-                        <small class="text-muted">
-                            <i class="bi bi-clock small"></i> 30-45 mins
-                        </small>
-                    </td>
+        <td>
+            <label class="fw-bold d-block text-dark mb-0" for="service_{{ service.id }}" style="cursor: pointer;">
+                {{ service.name }}
+            </label>
+            <small class="text-muted">
+                <i class="bi bi-clock small"></i> {{ service.average_time_minutes }} mins average
+            </small>
+        </td>
 
-                    <td class="text-end pe-4">
-                        <span class="badge bg-success-subtle text-success fs-6 fw-bold px-3 py-2 rounded-pill">
-                            ₹{{ service.price }}
-                        </span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
+        <td class="text-end pe-4">
+            <span class="badge bg-success-subtle text-success fs-6 fw-bold px-3 py-2 rounded-pill">
+                ₹{{ service.price }}
+            </span>
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
         </table>
         </div>
             
             <div class="card-footer bg-white border-top p-4 d-flex justify-content-between align-items-center">
                 <div class="text-start">
                     <span class="text-muted small d-block">Selected Items</span>
-                    <h5 class="mb-0 fw-bold"><span id="selected-count">0</span> Services Total</h5>
-                </div>
-                <button type="submit" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm">
-                    Add to Cart <i class="bi bi-cart-plus ms-2"></i>
-                </button>
-            </div>
+                        <h5 class="mb-0 fw-bold">
+                    <span id="selected-count">0</span> Services Total: 
+                    <span class="text-primary">₹<span id="total-price">0</span></span>
+            </h5>
         </div>
+        <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">
+            {% if is_open %}
+            <a href="{% url 'add_to_cart'%}"><button type="submit" class="btn btn-primary btn-lg shadow-sm d-flex align-items-center rounded-3">
+                <span>Add to Cart</span>
+                <i class="bi bi-cart-plus ms-2"></i>
+            </button></a>
+            {% else %}            
+            <a href="{% url 'add_to_cart' %}"><button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                <div class="d-flex flex-column align-items-start">
+                <span class="btn-main-text">Pre-book Now <i class="bi bi-calendar-check ms-2"></i></span>
+                <span class="btn-sub-text">Opens at {{ branch.opening_time|time:"g:i A" }}</span>
+            </div>
+        </button></a>
+    {% endif %}
+</div>
+    </div>
+    </div>
     </form>
 </div>
 
 <script>
     document.querySelectorAll('.service-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            const count = document.querySelectorAll('.service-checkbox:checked').length;
-            document.getElementById('selected-count').innerText = count;
+            updateSummary();
         });
     });
+
+    function updateSummary() {
+        let totalCount = 0;
+        let totalPrice = 0;
+        
+        // Get all checked checkboxes
+        const checkedBoxes = document.querySelectorAll('.service-checkbox:checked');
+        
+        checkedBoxes.forEach(checkbox => {
+            totalCount++;
+            // Get the price from the data-price attribute we added
+            totalPrice += parseFloat(checkbox.getAttribute('data-price'));
+        });
+
+        // Update the UI
+        document.getElementById('selected-count').innerText = totalCount;
+        document.getElementById('total-price').innerText = totalPrice.toLocaleString('en-IN');
+    }
+
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
 </script>
+
+<style>
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+<style>
+/* Open State: Soft Green with Pulse */
+.status-open {
+    background-color: rgba(25, 135, 84, 0.12); /* Soft green tint */
+    color: #198754;
+    border: 1px solid rgba(25, 135, 84, 0.2);
+}
+
+.status-open .status-dot {
+    background-color: #198754;
+    box-shadow: 0 0 0 rgba(25, 135, 84, 0.4);
+    animation: pulse-green 2s infinite;
+}
+
+/* Closed State: Soft Red/Gray */
+.status-closed {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+.status-closed .status-dot {
+    background-color: #dc3545;
+    opacity: 0.6;
+}
+.est-wait-badge{
+    background-color: rgba(25, 135, 84, 0.1); /* Soft Green */
+    border-radius: 100px;
+    color: #198754; 
+    border: 1px solid rgba(25, 135, 84, 0.2);
+    font-weight: 600;
+}
+
+tbody tr:hover {
+    background-color: #fcfcfc; /* Extremely subtle grey */
+    transition: background 0.2s ease;
+}
+
+/* Pulse Animation for the 'Live' feel */
+@keyframes pulse-green {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(25, 135, 84, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+}
+</style>
 {% endblock %}

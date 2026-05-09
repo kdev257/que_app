@@ -62,4 +62,24 @@
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('id_role_select');
+    const orgField = document.getElementById('id_organization')?.closest('p, div.mb-3, .form-group');
+    const branchField = document.getElementById('id_branch')?.closest('p, div.mb-3, .form-group');
+
+    function toggleFields() {
+        if (roleSelect.value === 'customer') {
+            if (orgField) orgField.style.display = 'none';
+            if (branchField) branchField.style.display = 'none';
+        } else {
+            if (orgField) orgField.style.display = 'block';
+            if (branchField) branchField.style.display = 'block';
+        }
+    }
+
+    roleSelect.addEventListener('change', toggleFields);
+    toggleFields(); // Run on page load
+});
+</script>
 {% endblock %}    

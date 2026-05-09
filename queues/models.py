@@ -1,3 +1,4 @@
+import datetime
 from django.utils import timezone
 from django.db import models
 from django.db.models import Max, Min
@@ -70,7 +71,7 @@ class Token(models.Model):
    
     
     def generate_token_number(self):
-        today = timezone.localdate()  # safer than date.today() with timezones
+        today = datetime.date.today() # safer than date.today() with timezones
 
         last_token = (
             Token.objects
