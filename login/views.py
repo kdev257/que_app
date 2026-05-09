@@ -17,27 +17,27 @@ from icecream import ic
 
 def registration(request):
         if request.method =='POST':
-            form = Registrationform(request.POST)        
-            if form.is_valid():           
+            form = Registrationform(request.POST)
+            if form.is_valid():
                 form.save()
                 messages.success(request,'Your registration was successful')
                 return redirect('user_login')
             else:
                 messages.error(request,'Your Registration Could not be Completed.Pls Contact Admin')
-                
+
         else:
             form = Registrationform()
         return render(request,'login/sign-up.html',{'form':form})
 
 
 
-def user_login(request):    
+def user_login(request):
     if request.method=='POST':
         fm = CustomAuthenticationForm(request=request,data=request.POST)
-        if fm.is_valid():            
+        if fm.is_valid():
             name = fm.cleaned_data['username']
             pw =fm.cleaned_data['password']
-            user=authenticate(username=name,password=pw)                      
+            user=authenticate(username=name,password=pw)
             if user is not None:
                 login(request,user)
                 messages.success(request,(f'Login Successful...Welcome {user}'))
@@ -49,35 +49,39 @@ def user_login(request):
                     if user_profile.role == 'customer':
                         return redirect('customer_dashboard')
                     if user_profile.role == 'branch_admin':
-                        branch_id = user_profile.branch.id
-                        return redirect('shop_dashboard' , id=branch_id)
-                    else:
-                        return redirect('admin')            
-                                
+                        if user_profile.branch:
+                            branch_id = user_profile.branch.id
+                            return redirect('shop_dashboard' , id=branch_id)
+                        else:
+                            messages.error(request, 'No branch assigned to this admin.')
+                            return redirect('/')
+
+
     else:
         fm=CustomAuthenticationForm()
-    return render(request,'login/login.html',{'form':fm}) 
+    return render(request,'login/login.html',{'form':fm})
 
-@login_required 
+
+@login_required
 def user_profile(request):
-    user = request.user 
-    if user.is_authenticated:
-        profile = request.user.user_profile
-        if request.method == 'POST':
-            # Pass user here for POST
-            form = UserProfileForm(request.POST, request.FILES, instance=profile, user=request.user)
-            if form.is_valid():
-                form.save()
-                return redirect('user_login')
-        else:
-        # Pass user here for GET (This is where your current error is)
-            form = UserProfileForm(instance=profile, user=request.user)
-    else:
-        messages.error(request,'You are not authorized to access this page')
-    
-    return render(request, 'login/profile.html', {'form': form})
+    # This gets the existing profile or creates a blank one for the current user
+    # This prevents errors if the profile doesn't exist yet
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
 
+    if request.method == 'POST':
+        # Use 'instance' to tell Django we are updating THIS specific profile
+        form = UserProfileForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile updated successfully!')
+            # It's better to redirect to a dashboard rather than the login page
+            return redirect('user_login')
+    else:
+        # Pre-fill the form with the existing profile data
+        form = UserProfileForm(instance=profile)
+
+    return render(request, 'login/profile.html', {'form': form})
 def logout_view(request):
     logout(request)
     messages.success(request, 'You have been logged out successfully.')
-    return redirect('/')    
+    return redirect('/')
