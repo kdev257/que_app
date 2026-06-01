@@ -34,4 +34,39 @@ class Promotion(models.Model):
 
     def __str__(self):
         return f"{self.get_slot_display()}: {self.title}"
+
+
+class PromotionDiscount(models.Model):
+    promotion = models.OneToOneField(Promotion, on_delete=models.CASCADE, related_name='discount')
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, help_text="Discount percentage to apply to the cart total (e.g., 10.00 for 10%)")
+    cashback_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Cashback amount to reward after service completion")
+    is_active = models.BooleanField(default=True)
+
+    def is_valid(self):
+        return self.is_active and self.promotion.is_currently_running()
+
+    def __str__(self):
+        return f"Discount for {self.promotion.title}"
+
+
+class PlatformFee(models.Model):
+    name = models.CharField(max_length=100, default="Booking Fee")
+    fee_logged_in = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Fee for registered / logged-in users")
+    fee_guest = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Fee for guest checkouts")
+    start_date = models.DateTimeField(null=True, blank=True, help_text="Optional date from which the fee starts applying")
+    end_date = models.DateTimeField(null=True, blank=True, help_text="Optional date after which the fee stops applying")
+    is_active = models.BooleanField(default=True, help_text="Toggle to enable or disable this fee setup")
+
+    def is_currently_active(self):
+        if not self.is_active:
+            return False
+        now = timezone.now()
+        if self.start_date and self.start_date > now:
+            return False
+        if self.end_date and self.end_date < now:
+            return False
+        return True
+
+    def __str__(self):
+        return f"{self.name} (Logged: Rs. {self.fee_logged_in}, Guest: Rs. {self.fee_guest})"
         

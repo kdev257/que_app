@@ -65,15 +65,30 @@
                     <span class="text-muted">Subtotal</span>
                     <span class="fw-semibold">₹{{ total_price }}</span>
                 </div>
+                {% if discount_amount > 0 %}
+                <div class="d-flex justify-content-between mb-2 text-success">
+                    <span>Discount ({{ promo_title }})</span>
+                    <span>- ₹{{ discount_amount }}</span>
+                </div>
+                {% endif %}
                 <div class="d-flex justify-content-between mb-3">
                     <span class="text-muted">Queue Fee</span>
-                    <span class="text-success fw-semibold">FREE</span>
+                    <span class="{% if booking_fee > 0 %}text-dark fw-semibold{% else %}text-success fw-semibold{% endif %}">
+                        {% if booking_fee > 0 %}₹{{ booking_fee }}{% else %}FREE{% endif %}
+                    </span>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between mb-4">
                     <span class="h5 fw-bold">Total</span>
-                    <span class="h5 fw-bold text-primary">₹{{ total_price }}</span>
+                    <span class="h5 fw-bold text-primary">₹{{ final_price }}</span>
                 </div>
+
+                {% if cashback_amount > 0 %}
+                <div class="alert alert-success border-0 rounded-3 py-2 px-3 mb-4 shadow-sm text-start" role="alert" style="font-size: 0.85rem;">
+                    <i class="bi bi-gift-fill me-2"></i>
+                    <strong>Cashback Earned:</strong> You will get ₹{{ cashback_amount }} cashback after service completion!
+                </div>
+                {% endif %}
 
                 <form method="POST" action="{% url 'create_token' cart.id %}">
                     {% csrf_token %}
@@ -84,10 +99,31 @@
                         <div class="input-group">
                             <input type="number" name="commute_time" id="commute_time" 
                                    class="form-control border-0 bg-transparent" 
-                                   placeholder="e.g. 15" required min="0">
+                                   placeholder="e.g. 15" required min="0"
+                                   hx-post="{% url 'validate_booking_time' cart.id %}"
+                                   hx-trigger="keyup changed delay:400ms, change"
+                                   hx-include="closest form"
+                                   hx-target="#validation-warning">
                             <span class="input-group-text border-0 bg-transparent text-muted">mins</span>
                         </div>
                     </div>
+                    <div class="mb-4 bg-light p-3 rounded-3">
+                        <label for="booking_date" class="form-label fw-bold small text-uppercase">
+                            <i class="bi bi-calendar3 me-1"></i>Date of Booking if not today
+                        </label>
+                        <div class="input-group">
+                            <input type="date" name="booking_date" id="booking_date" 
+                                   class="form-control border-0 bg-transparent" 
+                                   placeholder="e.g. 01/05/2026"
+                                   hx-post="{% url 'validate_booking_time' cart.id %}"
+                                   hx-trigger="change"
+                                   hx-include="closest form"
+                                   hx-target="#validation-warning">
+                            <span class="input-group-text border-0 bg-transparent text-muted"></span>
+                     </div>
+                    </div>
+
+                    <div id="validation-warning" class="mb-3"></div>
 
                     <button type="submit" class="btn btn-success btn-lg w-100 rounded-pill shadow-sm fw-bold">
                         Confirm & Join Queue <i class="bi bi-arrow-right ms-2"></i>

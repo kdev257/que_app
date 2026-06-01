@@ -16,7 +16,13 @@
                 
                 <div class="card-header bg-primary text-white text-center py-4 border-0">
                     <h5 class="text-uppercase mb-1 fw-bold" style="letter-spacing: 1px; opacity: 0.9;">
-                        {% if user.first_name %}{{ user.first_name }}{% else %}{{ user.username }}{% endif %}'s Token
+                        {% if is_guest %}
+                            {{ token.guest.name }}
+                        {% elif user.first_name %}
+                            {{ user.first_name }} {{ user.last_name }}
+                        {% else %}
+                            {{ user.username }}
+                        {% endif %}'s Token
                     </h5>
                     <div class="display-1 fw-bold mb-0" style="font-size: 5.5rem; line-height: 1;">
                         #{{ token.token_number }}
@@ -27,44 +33,12 @@
                 </div>
 
                 <div class="card-body p-4">
-                    
-                    <div class="row text-center mb-4 g-2">
-                        <div class="col-6">
-                            <div class="p-3 bg-light rounded-3 border">
-                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Now Serving</small>
-                                <span class="h4 fw-bold text-primary">{{ current_serving|default:"--" }}</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="p-3 bg-light rounded-3 border">
-                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">People Ahead</small>
-                                <span class="h4 fw-bold text-danger">{{ people_ahead }}</span>
-                            </div>
-                        </div>
+                    <div id="token-stats" 
+                         hx-get="{% url 'token_status_updates' token.id %}" 
+                         hx-trigger="every 60s" 
+                         hx-swap="innerHTML">
+                        {% include 'queues/partials/stats.html' %}
                     </div>
-
-                    <div class="list-group list-group-flush mb-4">
-                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <div>
-                                <i class="bi bi-hourglass-split text-warning me-2"></i>
-                                <span class="text-muted">Wait Time</span>
-                            </div>
-                            <span class="fw-bold">{{ token.expected_waiting_time }} mins</span>
-                        </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <div>
-                                <i class="bi bi-clock-history text-success me-2"></i>
-                                <span class="text-muted">Expected Start</span>
-                            </div>
-                            <span class="fw-bold">{{ token.expected_start_time|time:"H:i" }}</span>
-                        </div>
-
-                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <div>
-                                <i class="bi bi-clock-fill text-danger me-2"></i> <span class="text-muted">Expected End</span>
-                            </div>
-                            <span class="fw-bold">{{ token.expected_end_time|time:"H:i" }}</span>
-                        </div>
 
                     <hr style="border-top: 2px dashed #dee2e6; opacity: 1;">
 
@@ -84,18 +58,51 @@
                                 <span class="fw-bold text-dark">₹{{ item.service.price }}</span>
                             </div>
                             {% endfor %}
-                            
-                            {% comment %} <div class="d-flex justify-content-between mt-3 pt-2 border-top border-secondary border-opacity-25">
-                                <span class="fw-bold">Total Bill</span>
-                                <span class="fw-bold text-success">₹{{ total_price|default:token.total_price }}</span>
-                            </div> {% endcomment %}
+                            <div class="mt-3 pt-2 border-top border-secondary border-opacity-25">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted small">Subtotal</span>
+                                    <span class="fw-semibold text-dark small">₹{{ total_price }}</span>
+                                </div>
+                                {% if token.discount_amount > 0 %}
+                                <div class="d-flex justify-content-between mb-1 text-success small">
+                                    <span>Discount</span>
+                                    <span>- ₹{{ token.discount_amount }}</span>
+                                </div>
+                                {% endif %}
+                                {% if token.booking_fee > 0 %}
+                                <div class="d-flex justify-content-between mb-1 text-muted small">
+                                    <span>Queue Fee</span>
+                                    <span>₹{{ token.booking_fee }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-bold">Total Bill</span>
+                                    <span class="fw-bold text-success">₹{{ token.final_price|default:total_price }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2 pt-2 border-top border-secondary border-opacity-10 align-items-center">
+                                    <span class="small text-muted">Payment Status</span>
+                                    <span class="badge {% if token.payment_status == 'paid' %}bg-success{% elif token.payment_status == 'pay_at_shop' %}bg-warning text-dark{% else %}bg-danger{% endif %} rounded-pill px-3">
+                                        {{ token.get_payment_status_display }}
+                                    </span>
+                                </div>
+                                {% if token.razorpay_payment_id %}
+                                <div class="d-flex justify-content-between mt-1 small" style="font-size: 0.75rem;">
+                                    <span class="text-muted">Payment ID</span>
+                                    <span class="font-monospace text-muted">{{ token.razorpay_payment_id }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {% if token.cashback_amount > 0 %}
+                            <div class="alert alert-success border-0 rounded-3 py-2 px-3 mt-3 mb-0 shadow-sm text-start" role="alert" style="font-size: 0.8rem;">
+                                <i class="bi bi-gift-fill me-2"></i>
+                                <strong>Cashback Reward:</strong> ₹{{ token.cashback_amount }} cashback will be awarded after service!
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button onclick="window.print()" class="btn btn-outline-dark rounded-pill py-2">
-                            {% comment %} <i class="bi bi-printer me-2"></i>Download / Print Token {% endcomment %}
-                        </button>
                         <a href="{% url 'customer_dashboard' %}" class="btn btn-link text-decoration-none text-muted small">
                             Return to Homepage
                         </a>
@@ -121,9 +128,9 @@
 </div>
 
 <div class="d-grid gap-2 mt-4">
-    <a href="#" class="btn btn-outline-dark rounded-pill shadow-sm">
+    <button onclick="window.print()" class="btn btn-outline-dark rounded-pill shadow-sm py-2">
         <i class="bi bi-printer me-2"></i> Download / Print Token
-    </a>
+    </button>
 </div>
             
             <div class="text-center mt-4">

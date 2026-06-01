@@ -20,5 +20,10 @@ urlpatterns = [
     path("customer_home/", customer_home, name="customer_home"),
     path("open_branch/<int:branch_id>/", open_branch, name="open_branch"),
     path("close_branch/<int:branch_id>/", close_branch, name="close_branch"),
- 
+    path('token_status_updates/<int:token_id>/', token_status_updates, name='token_status_updates'),
+    path('validate_booking_time/<int:cart_id>/', validate_booking_time, name='validate_booking_time'),
+    path('claim_promotion/<int:promo_id>/', claim_promotion, name='claim_promotion'),
+    path('checkout/<int:cart_id>/', checkout, name='checkout'),
+    path('pay_at_shop/<int:cart_id>/', pay_at_shop, name='pay_at_shop'),
+    path('payment_callback/', payment_callback, name='payment_callback'),
 ]

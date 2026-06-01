@@ -11,6 +11,6 @@ class QueueAdmin(admin.ModelAdmin):
         
 @admin.register(Token)
 class TokenAdmin(admin.ModelAdmin):
-    list_display = ['user', 'token_number', 'status', 'created_at']
-    list_filter = ['status', 'created_at']
+    list_display = ['user', 'guest', 'token_number', 'status', 'final_price', 'payment_status', 'created_at']
+    list_filter = ['status', 'payment_status', 'created_at']
     ordering = ['-created_at']

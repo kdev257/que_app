@@ -3,3 +3,12 @@ __pycache__/
 db.sqlite3
 .env 
 venv/ 
+staticfiles/
+media/
+.DS_Store
+.idea/
+.vscode/
+*.log
+*.bak
+*.swp
+*.tmp

@@ -9,7 +9,7 @@ from django.contrib.auth.views import (
     PasswordResetCompleteView
 )
 from django.urls import reverse_lazy
-from .forms import Registrationform, CustomAuthenticationForm, UserProfileForm
+from .forms import Registrationform, CustomAuthenticationForm, UserProfileForm, guest_login_form
 from .models import UserProfile
 
 def registration(request):
@@ -70,8 +70,26 @@ def user_profile(request):
     
     return render(request, 'login/profile.html', {'form': form})
 
+def guest_login(request):
+    if request.method == 'POST':
+        form = guest_login_form(request.POST)
+        if form.is_valid():
+            guest = form.save()  # Save the guest to the database
+            # Store guest ID in session so views can identify this guest
+            request.session['guest_id'] = guest.id
+            request.session.modified = True
+            messages.success(request, f'Welcome, {guest.name}! You have logged in as a guest.')
+            return redirect('customer_dashboard')
+        else:
+            messages.error(request, 'Guest login failed. Please correct the errors below.')
+    else:
+        form = guest_login_form()
+    return render(request, 'login/guest_login.html', {'form': form})
+
 def logout_view(request):
     logout(request)
+    # Clear guest session on logout
+    request.session.pop('guest_id', None)
     messages.success(request, 'You have been logged out successfully.')
     return redirect('user_login')
 

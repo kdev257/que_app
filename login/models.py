@@ -48,3 +48,14 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username}'s Profile"
+
+
+class Guest(models.Model):
+    name = models.CharField(max_length=150)
+    email = models.EmailField()
+    phone_no = models.CharField(max_length=15)
+    pin_code = models.CharField(max_length=6)
+    
+
+    def __str__(self):
+        return f"{self.name}, {self.pin_code}"

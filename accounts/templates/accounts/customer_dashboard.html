@@ -18,6 +18,53 @@
 </div>
     </div>
 
+    <!-- Promotional Space -->
+    {% if promotions %}
+    <div class="row mb-5">
+        <div class="col-12">
+            <div id="promoCarousel" class="carousel slide shadow-sm rounded-4 overflow-hidden" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    {% for promo in promotions %}
+                    <div class="carousel-item {% if forloop.first %}active{% endif %}" data-bs-interval="5000">
+                        <div class="position-relative overflow-hidden bg-dark" style="height: 260px;">
+                            {% if promo.image %}
+                            <img src="{{ promo.image.url }}" class="d-block w-100 h-100 object-fit-cover opacity-75" alt="{{ promo.title }}">
+                            {% endif %}
+                            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%);"></div>
+                            
+                            <div class="carousel-caption d-none d-md-block text-start start-0 bottom-0 p-5 w-100">
+                                <span class="badge bg-warning text-dark mb-2 text-uppercase fw-bold" style="letter-spacing: 1px;">Special Promotion</span>
+                                <h3 class="fw-bold text-white mb-3" style="max-width: 600px;">{{ promo.title }}</h3>
+                                <a href="{% url 'claim_promotion' promo.id %}" onclick="window.open('{{ promo.link }}', '_blank');" class="btn btn-warning rounded-pill px-4 py-2 fw-bold shadow-sm hover-scale-btn">
+                                    Claim Offer <i class="bi bi-arrow-right-short ms-1"></i>
+                                </a>
+                            </div>
+                            
+                            <!-- Mobile layout -->
+                            <div class="d-md-none position-absolute start-0 bottom-0 p-4 w-100">
+                                <span class="badge bg-warning text-dark mb-1 text-uppercase fw-bold" style="font-size: 0.7rem;">Offer</span>
+                                <h5 class="fw-bold text-white mb-2">{{ promo.title }}</h5>
+                                <a href="{% url 'claim_promotion' promo.id %}" onclick="window.open('{{ promo.link }}', '_blank');" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold">Claim Offer</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if promotions.count > 1 %}
+                <button class="carousel-control-prev" type="button" data-bs-target="#promoCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#promoCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <h4 class="fw-bold mb-4">Service Categories</h4>
     <div class="row g-4">
         {% for category in categories %}
@@ -58,5 +105,53 @@
         box-shadow: 0 1rem 3rem rgba(0,0,0,.1) !important;
     }
     .transition { transition: all 0.3s ease; }
+    
+    .hover-scale-btn {
+        transition: all 0.2s ease;
+    }
+    .hover-scale-btn:hover {
+        transform: translateY(-1px) scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+    }
 </style>
+{% if popup_promotions %}
+<!-- Promo Modal -->
+<div class="modal fade" id="promoModal" tabindex="-1" aria-labelledby="promoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+            {% for promo in popup_promotions %}
+            {% if forloop.first %}
+            <div class="position-relative bg-dark text-white" style="min-height: 350px;">
+                {% if promo.image %}
+                <img src="{{ promo.image.url }}" class="w-100 h-100 object-fit-cover position-absolute opacity-75" style="z-index: 0;" alt="{{ promo.title }}">
+                {% endif %}
+                <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.85) 100%); z-index: 1;"></div>
+                
+                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close" style="z-index: 10;"></button>
+                
+                <div class="position-absolute bottom-0 start-0 p-4 w-100" style="z-index: 2;">
+                    <span class="badge bg-warning text-dark mb-2 text-uppercase fw-bold">Limited Time Offer</span>
+                    <h3 class="fw-bold mb-3">{{ promo.title }}</h3>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'claim_promotion' promo.id %}" onclick="window.open('{{ promo.link }}', '_blank');" class="btn btn-warning rounded-pill px-4 fw-bold shadow-sm hover-scale-btn">Claim Offer</a>
+                        <button type="button" class="btn btn-outline-light rounded-pill px-3" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var myModalElement = document.getElementById('promoModal');
+        if (myModalElement) {
+            var myModal = new bootstrap.Modal(myModalElement);
+            myModal.show();
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}

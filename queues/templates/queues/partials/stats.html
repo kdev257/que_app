@@ -1,0 +1,51 @@
+<div class="row text-center mb-4 g-2">
+    <div class="col-6">
+        <div class="p-3 bg-light rounded-3 border">
+            <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">Now Serving</small>
+            <span class="h4 fw-bold text-primary">{{ current_serving|default:"--" }}</span>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="p-3 bg-light rounded-3 border">
+            <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.7rem;">People Ahead</small>
+            <span class="h4 fw-bold text-danger">{{ people_ahead }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="list-group list-group-flush mb-4">
+    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+        <div>
+            <i class="bi bi-hourglass-split text-warning me-2"></i>
+            <span class="text-muted">Wait Time</span>
+        </div>
+        <span class="fw-bold">{{ token.dynamic_waiting_time }} mins</span>
+    </div>
+    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+        <div>
+            <i class="bi bi-calendar3 text-warning me-2"></i>
+            <span class="text-muted">Date</span>
+        </div>
+        <span class="fw-bold">{{ token.token_date|date:"F j, Y" }}</span>
+    </div>
+    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+        <div>
+            <i class="bi bi-clock-history text-success me-2"></i>
+            <span class="text-muted">Expected Start</span>
+        </div>
+        <span class="fw-bold">{{ token.expected_start_time|time:"H:i" }}</span>
+    </div>
+
+    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+        <div>
+            <i class="bi bi-clock-fill text-danger me-2"></i> <span class="text-muted">Expected End</span>
+        </div>
+        <span class="fw-bold">{{ token.expected_end_time|time:"H:i" }}</span>
+    </div>
+    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+        <div>
+            <i class="bi bi-clock-fill text-danger me-2"></i> <span class="text-muted">Last Serving Token</span>
+        </div>
+        <span class="fw-bold">{{ last_serving_token|default:"--" }}</span>
+    </div>
+</div>

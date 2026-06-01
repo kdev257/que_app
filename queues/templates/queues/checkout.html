@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <!-- Step Progress Indicator -->
+            <div class="d-flex justify-content-between align-items-center mb-5 position-relative">
+                <div class="position-absolute top-50 start-50 translate-middle w-75 bg-light-subtle progress-bar-bg" style="height: 2px; z-index: -1;">
+                    <div class="bg-primary" style="height: 2px; width: 50%;"></div>
+                </div>
+                <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 35px; height: 35px;">
+                        <i class="bi bi-cart-check-fill"></i>
+                    </div>
+                    <span class="small fw-semibold mt-2 text-muted">Review Selection</span>
+                </div>
+                <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow" style="width: 40px; height: 40px; border: 4px solid var(--bs-body-bg);">
+                        <i class="bi bi-credit-card-fill"></i>
+                    </div>
+                    <span class="small fw-bold mt-2 text-primary">Secure Checkout</span>
+                </div>
+                <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 35px; height: 35px;">
+                        <i class="bi bi-ticket-perforated"></i>
+                    </div>
+                    <span class="small fw-semibold mt-2 text-muted">Token Issued</span>
+                </div>
+            </div>
+
+            <!-- Main Checkout Card -->
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-gradient-primary text-white py-4 px-4 border-0 position-relative overflow-hidden" style="background: linear-gradient(135deg, #0d6efd, #0b5ed7);">
+                    <div class="position-absolute top-0 end-0 opacity-10 p-3" style="transform: translate(20px, -20px);">
+                        <i class="bi bi-shield-lock-fill" style="font-size: 8rem;"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1"><i class="bi bi-shield-check me-2"></i>Complete Your Booking</h4>
+                    <p class="mb-0 text-white-50 small">
+                        Secure payment powered by Razorpay
+                    </p>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <!-- Order Items Preview -->
+                    <h5 class="fw-bold mb-3 text-dark">Selected Services</h5>
+                    <div class="list-group list-group-flush mb-4 rounded-3 border">
+                        {% for item in cart_items %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light-hover">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary-subtle text-primary rounded-3 p-2 me-3 small">
+                                    <i class="bi {% if 'Cut' in item.service.name %}bi-scissors{% elif 'Color' in item.service.name %}bi-brush{% else %}bi-stars{% endif %}"></i>
+                                </div>
+                                <div>
+                                    <span class="fw-bold d-block text-dark">{{ item.service.name }}</span>
+                                    <small class="text-muted"><i class="bi bi-geo-alt-fill me-1"></i>{{ item.service.branch.name }}</small>
+                                </div>
+                            </div>
+                            <span class="fw-bold text-dark">₹{{ item.service.price }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Payment Breakdown -->
+                    <div class="bg-light p-4 rounded-4 mb-4">
+                        <h5 class="fw-bold mb-3 text-dark">Billing Summary</h5>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Subtotal</span>
+                            <span class="fw-semibold text-dark">₹{{ total_price }}</span>
+                        </div>
+                        
+                        {% if discount_amount > 0 %}
+                        <div class="d-flex justify-content-between mb-2 text-success">
+                            <span>Discount ({{ promo_title }})</span>
+                            <span>- ₹{{ discount_amount }}</span>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Booking Convenience Fee</span>
+                            <span class="{% if booking_fee > 0 %}text-dark fw-semibold{% else %}text-success fw-bold{% endif %}">
+                                {% if booking_fee > 0 %}₹{{ booking_fee }}{% else %}FREE{% endif %}
+                            </span>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="h5 fw-bold mb-0 text-dark">Total Amount Due</span>
+                            <span class="h4 fw-black mb-0 text-primary">₹{{ final_price }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            {% if razorpay_order_id %}
+                            <button id="pay-online-btn" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm fw-bold py-3 hover-lift">
+                                <i class="bi bi-credit-card me-2"></i> Pay Online
+                            </button>
+                            {% else %}
+                            <button id="pay-online-btn" class="btn btn-secondary btn-lg w-100 rounded-pill fw-bold py-3" disabled>
+                                <i class="bi bi-credit-card me-2"></i> Pay Online (Unavailable)
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <form method="POST" action="{% url 'pay_at_shop' cart.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-secondary btn-lg w-100 rounded-pill fw-bold py-3 hover-lift">
+                                    <i class="bi bi-shop me-2"></i> Pay at Shop
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help / Trust Badges -->
+            <div class="row text-center g-3 mt-2">
+                <div class="col-4">
+                    <div class="text-muted small">
+                        <i class="bi bi-shield-fill-check text-success fs-4 d-block mb-1"></i>
+                        Secure Checkout
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="text-muted small">
+                        <i class="bi bi-clock-history text-primary fs-4 d-block mb-1"></i>
+                        Realtime Queue
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="text-muted small">
+                        <i class="bi bi-patch-check-fill text-info fs-4 d-block mb-1"></i>
+                        Verified Booking
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Razorpay Script Integration -->
+{% if razorpay_order_id %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    // 1. Real Razorpay Integration
+    const options = {
+        "key": "{{ razorpay_key_id }}",
+        "amount": {{ amount_paise }},
+        "currency": "INR",
+        "name": "QuickQueue",
+        "description": "Secure Queue Booking Prepayment",
+        "image": "https://img.icons8.com/color/96/000000/salon.png",
+        "order_id": "{{ razorpay_order_id }}",
+        "handler": function (response) {
+            submitCallbackForm(response.razorpay_payment_id, response.razorpay_order_id, response.razorpay_signature);
+        },
+        "prefill": {
+            "name": "{{ user_name }}",
+            "email": "{{ user_email }}",
+            "contact": "{{ user_phone }}"
+        },
+        "theme": {
+            "color": "#0d6efd"
+        }
+    };
+    
+    const rzp = new Razorpay(options);
+    document.getElementById('pay-online-btn').onclick = function (e) {
+        rzp.open();
+        e.preventDefault();
+    };
+
+    // Helper function to submit payment callback POST
+    function submitCallbackForm(paymentId, orderId, signature) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "payment_callback" %}';
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        form.appendChild(csrfInput);
+
+        const paymentIdInput = document.createElement('input');
+        paymentIdInput.type = 'hidden';
+        paymentIdInput.name = 'razorpay_payment_id';
+        paymentIdInput.value = paymentId;
+        form.appendChild(paymentIdInput);
+
+        const orderIdInput = document.createElement('input');
+        orderIdInput.type = 'hidden';
+        orderIdInput.name = 'razorpay_order_id';
+        orderIdInput.value = orderId;
+        form.appendChild(orderIdInput);
+
+        const signatureInput = document.createElement('input');
+        signatureInput.type = 'hidden';
+        signatureInput.name = 'razorpay_signature';
+        signatureInput.value = signature;
+        form.appendChild(signatureInput);
+
+        const cartIdInput = document.createElement('input');
+        cartIdInput.type = 'hidden';
+        cartIdInput.name = 'cart_id';
+        cartIdInput.value = '{{ cart.id }}';
+        form.appendChild(cartIdInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+{% endif %}
+
+<style>
+    .bg-primary-subtle {
+        background-color: #e7f1ff;
+    }
+    .bg-light-hover:hover {
+        background-color: #f8f9fa;
+    }
+    .progress-bar-bg {
+        background-color: #e9ecef;
+    }
+    .hover-lift {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}

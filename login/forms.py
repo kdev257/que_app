@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm,PasswordChangeForm,PasswordResetForm,AuthenticationForm
-from .models import User,UserProfile
+from .models import Guest, User,UserProfile
 
 class CustomAuthenticationForm(AuthenticationForm):
     class Meta:
@@ -42,3 +42,7 @@ class Registrationform(UserCreationForm):
         model = User        
         fields =['username','first_name','last_name','password1','password2','email']    
 
+class guest_login_form(forms.ModelForm):
+    class Meta:
+        model = Guest
+        fields = ['name', 'email', 'phone_no', 'pin_code']

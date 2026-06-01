@@ -10,14 +10,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     
     
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8f9fa; /* Light grey background for a modern feel */
-            color: #212529;
-        }
+         body {
+        font-family: 'Inter', sans-serif;
+        background-color: #efeae2;        
+        /* Combines the color gradient overlay with your actual image link */
+        background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');        
+        /* Choose EITHER cover (stretches to fit) OR a specific size (like 400px) */
+        background-size: cover;         
+        background-position: center;        
+        /* Choose EITHER no-repeat OR repeat based on what you want */
+        background-repeat: no-repeat;
+        width: 100%;
+        height: 100vh;
+        margin: 0; /* Added this! It removes the default white border around the body */
+    } 
+         
         .navbar {
             box-shadow: 0 2px 4px rgba(0,0,0,.08);
             padding: 1rem 0;
@@ -64,9 +75,10 @@
                 <ul class="navbar-nav ms-auto align-items-center">
                     {% if user.is_authenticated %}
                         <li class="nav-item me-3"><span class="text-light">Hi, {{ user.first_name }}</span></li>
-                        <li class="nav-item"><a class="btn btn-outline-light btn-sm px-3" href="{% url 'logout' %}">Logout</a></li>
+                        <li class="nav-item"><a class="btn btn-outline-light btn-sm px-3" href="{% url 'logout_view' %}">Logout</a></li>
                     {% else %}
                         <li class="nav-item"><a class="nav-link text-light me-3" href="{% url 'user_login' %}">Login</a></li>
+                        <li class="nav-item"><a class="nav-link text-light me-3" href="{% url 'guest_login' %}">Guest Login</a></li>
                         <li class="nav-item"><a class="btn btn-primary rounded-pill px-4" href="{% url 'register' %}">Register Free</a></li>
                     
                 </ul>
@@ -93,7 +105,7 @@
 </main>
 
 <footer class="container text-center py-5 text-muted">
-    <small>&copy; 2024 QueueSaaS. All rights reserved.</small>
+    <small>&copy; 2024 QuickQueue. All rights reserved.</small>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
