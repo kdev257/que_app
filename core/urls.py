@@ -32,6 +32,7 @@ urlpatterns = [
     path('log/', include('login.urls')),
     path('org/', include('organization.urls')),
     path('acc/', include('accounts.urls')),
+    path('restaurant/', include('restaurants.urls')),
     path('log/logout/', auth_views.LogoutView.as_view(next_page='/log/login/'), name='logout'),
     path('registration/', include('django.contrib.auth.urls')),
     

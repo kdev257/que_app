@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Order Status #{{ order.id }} - QuickQueue{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-7">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold text-dark"><i class="bi bi-clock-history text-primary me-2"></i>Live Order Status</h3>
+            <p class="text-muted small">Your status page will update automatically when the kitchen changes the order state.</p>
+        </div>
+        
+        <!-- Target container for HTMX polling -->
+        <div id="order-status-card" 
+             hx-get="{% url 'restaurants:order_status_htmx' order.id %}" 
+             hx-trigger="every 5s" 
+             hx-target="this">
+            <!-- Initial content load (render the partial) -->
+            {% include "restaurants/partials/order_status_card.html" with order=order %}
+        </div>
+    </div>
+</div>
+{% endblock %}

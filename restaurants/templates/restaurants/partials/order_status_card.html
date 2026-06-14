@@ -1,0 +1,103 @@
+<div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-white">
+    <!-- Header with dynamic color based on status -->
+    {% if order.status == 'pending_confirmation' %}
+    <div class="py-4 px-4 text-white text-center" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+        <div class="spinner-grow text-white mb-2" role="status" style="width: 2.5rem; height: 2.5rem;"></div>
+        <h4 class="fw-bold mb-0">Waiting for Confirmation</h4>
+        <p class="mb-0 text-white-50 small mt-1">Order #{{ order.id }} • {{ order.branch.name }}</p>
+    </div>
+    {% elif order.status == 'preparing' %}
+    <div class="py-4 px-4 text-white text-center" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+        <i class="bi bi-fire fs-1 d-block mb-1 animate-pulse"></i>
+        <h4 class="fw-bold mb-0">Kitchen is Preparing</h4>
+        <p class="mb-0 text-white-50 small mt-1">Your order is being cooked fresh</p>
+    </div>
+    {% elif order.status == 'ready' %}
+    <div class="py-4 px-4 text-white text-center" style="background: linear-gradient(135deg, #10b981, #047857);">
+        <i class="bi bi-check-circle-fill fs-1 d-block mb-1"></i>
+        <h4 class="fw-bold mb-0">Order is Ready!</h4>
+        {% if order.order_type == 'dine_in' %}
+        <p class="mb-0 text-white-50 small mt-1">Please proceed to <strong>Table {{ order.table.table_number }}</strong></p>
+        {% else %}
+        <p class="mb-0 text-white-50 small mt-1">Please collect your order at the Pickup Counter</p>
+        {% endif %}
+    </div>
+    {% elif order.status == 'served' or order.status == 'completed' %}
+    <div class="py-4 px-4 text-white text-center" style="background: linear-gradient(135deg, #6b7280, #374151);">
+        <i class="bi bi-heart-fill fs-1 d-block mb-1 text-danger"></i>
+        <h4 class="fw-bold mb-0">Meal Served!</h4>
+        <p class="mb-0 text-white-50 small mt-1">Thank you for dining with us</p>
+    </div>
+    {% elif order.status == 'cancelled' %}
+    <div class="py-4 px-4 text-white text-center" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">
+        <i class="bi bi-x-circle-fill fs-1 d-block mb-1"></i>
+        <h4 class="fw-bold mb-0">Order Cancelled</h4>
+        <p class="mb-0 text-white-50 small mt-1">Reason: {{ order.rejection_reason|default:"Unable to fulfill order" }}</p>
+    </div>
+    {% endif %}
+
+    <div class="card-body p-4 p-md-5">
+        <!-- Customer greeting -->
+        <div class="d-flex align-items-center gap-2 mb-4 p-3 bg-light rounded-3">
+            <i class="bi bi-person-circle fs-4 text-primary"></i>
+            <div>
+                <span class="fw-bold text-dark">{{ order.customer_name }}</span>
+                <span class="d-block text-muted small">Order #{{ order.id }}</span>
+            </div>
+            {% if order.minutes_until_arrival_dynamic %}
+            <div class="ms-auto text-end">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                    <i class="bi bi-hourglass-split me-1"></i>~{{ order.minutes_until_arrival_dynamic }} min away
+                </span>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if order.order_type == 'delivery' and order.expected_delivery_time %}
+        <div class="alert alert-info border-0 shadow-sm rounded-3 p-3 mb-4 d-flex align-items-center gap-3">
+            <i class="bi bi-truck fs-3 text-primary"></i>
+            <div>
+                <span class="d-block text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.75rem;">Expected Delivery Time</span>
+                <strong class="fs-5 text-dark">{{ order.expected_delivery_time|date:"g:i A" }}</strong>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Order info -->
+        <h6 class="fw-bold text-muted uppercase mb-3" style="letter-spacing: 1px;">Summary</h6>
+        
+        <ul class="list-group list-group-flush mb-4">
+            {% for item in order.items.all %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 bg-transparent">
+                <div>
+                    <span class="fw-bold text-dark">{{ item.menu_item.name }}</span>
+                    <span class="badge bg-secondary-subtle text-dark ms-2">x{{ item.quantity }}</span>
+                </div>
+                <span class="fw-semibold text-dark">₹{{ item.price }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <div class="bg-light p-4 rounded-4 text-center">
+            <span class="text-muted small d-block">Order Details</span>
+            <div class="d-flex justify-content-center gap-4 mt-2">
+                <div>
+                    <span class="d-block text-muted small">Type</span>
+                    <strong class="text-dark">{{ order.get_order_type_display }}</strong>
+                </div>
+                <div class="vr"></div>
+                <div>
+                    <span class="d-block text-muted small">Token No.</span>
+                    <strong class="text-dark">#{{ order.token.token_number }}</strong>
+                </div>
+                {% if order.table %}
+                <div class="vr"></div>
+                <div>
+                    <span class="d-block text-muted small">Table</span>
+                    <strong class="text-dark">{{ order.table.table_number }}</strong>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

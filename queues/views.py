@@ -12,6 +12,7 @@ from organization.models import Service
 from .models import Cart, CartItem, Token, TokenService
 from organization.models import Service, Branch
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
 from django.contrib import messages
 from django.db.models import Sum
 from django.core.mail import send_mail
@@ -79,8 +80,7 @@ def customer_required(view_func):
 @customer_required
 def service_category(request):
     """Landing page for customers when they login, shows all the service categories available in the system"""
-    services = Service_Category.objects.all()
-    return render(request, "queues/services.html", {"services": services})
+    return redirect('customer_dashboard')
 
 @customer_required
 @login_or_guest_required
@@ -88,6 +88,10 @@ def service_list(request, service_category_id):
     """
     Shows all services available for a category, filtered by user/guest location.
     """
+    category = get_object_or_404(Service_Category, id=service_category_id)
+    if category.name.lower() == 'restaurant':
+        return redirect('restaurants:restaurant_search')
+
     if request.user.is_authenticated:
         user_pincode = request.user.user_profile.pin_code
         branch_pincodes = Branch.objects.filter(pin_code=user_pincode).values_list('pin_code', flat=True)
@@ -104,7 +108,7 @@ def service_list(request, service_category_id):
                 pin_code=guest.pin_code
             ).distinct()
         else:
-            # Guest session missing or expired — redirect to guest login
+            # Guest session missing or expired – redirect to guest login
             branches = Branch.objects.none()
 
     return render(request, "queues/services.html", {"services": branches})
@@ -114,6 +118,10 @@ def service_list(request, service_category_id):
 def branch_services(request, branch_id):
     # 1. Use get_object_or_404 to prevent crashes if branch_id is invalid
     branch = get_object_or_404(Branch, id=branch_id)
+    
+    # Redirect to restaurant menu if this branch is a restaurant
+    if branch.services_category and branch.services_category.name.lower() == 'restaurant':
+        return redirect('restaurants:menu_view', branch_id=branch.id)
     
     # Recalculate queue times dynamically
     today = datetime.date.today()
@@ -448,7 +456,7 @@ def _execute_token_creation(request, cart, booking_date, commute_time, payment_s
             message=email_message,
             from_email=settings.EMAIL_HOST_USER,
             recipient_list=[token.user.email],
-            fail_silently=True,
+            fail_silently=False,
         )
     elif token.guest and token.guest.email:
         guest_obj = token.guest
@@ -746,6 +754,7 @@ def handle_no_show(request, token_id):
             
     return redirect("shop_dashboard",branch.id)
          
+@never_cache
 @customer_required
 @login_required
 def customer_home(request):
@@ -771,6 +780,8 @@ def customer_home(request):
     context = {
         "tokens": user_tokens
     }
+    if request.headers.get('HX-Request') == 'true' or request.META.get('HTTP_HX_REQUEST') == 'true':
+        return render(request, "queues/partials/customer_tokens_list.html", context)
     return render(request, "queues/customer_home.html", context)
 
 @login_required
@@ -782,18 +793,40 @@ def open_branch(request, id):
     return redirect("shop_dashboard", id=id)
 
 
+@never_cache
 @login_required
-def shop_dashboard(request,id):
+def shop_dashboard(request, id):
+    # Retrieve the target branch requested in the URL
+    branch = get_object_or_404(Branch, id=id)
+    
+    # Redirect to kitchen dashboard if this branch is a restaurant
+    if branch.services_category and branch.services_category.name.lower() == 'restaurant':
+        return redirect('restaurants:kitchen_dashboard', branch_id=branch.id)
+        
     user = request.user
-    user_branch = user.user_profile.branch
-    id = user_branch.id
-    if user_branch.is_open == False:
-            open_branch(request, id)
+    
+    # Enforce that saloon admins/staff can only see their own branch, but allow superusers to see any
+    if user.is_superuser:
+        branch_to_use = branch
+    else:
+        try:
+            profile = user.user_profile
+            user_branch = profile.branch
+            if not user_branch or user_branch.id != branch.id:
+                messages.error(request, "Access denied. You do not have permission for this branch.")
+                return redirect("customer_home")
+            branch_to_use = user_branch
+        except UserProfile.DoesNotExist:
+            messages.error(request, "Access denied. User profile not found.")
+            return redirect("customer_home")
+            
+    if branch_to_use.is_open == False:
+        open_branch(request, branch_to_use.id)
             
     # Recalculate queue times dynamically on page load
-    recalculate_queue_times(user_branch, datetime.date.today())
+    recalculate_queue_times(branch_to_use, datetime.date.today())
             
-    tokens = Token.objects.filter(branch_id=id,
+    tokens = Token.objects.filter(branch_id=branch_to_use.id,
         status__in=["waiting", "in_progress"],token_date=datetime.date.today()
     ).order_by("token_number")
     total_waiting = tokens.filter(status="waiting").count()

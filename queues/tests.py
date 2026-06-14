@@ -325,4 +325,74 @@ class TokenTestCase(TestCase):
         # Access customer_home and assert redirect to shop_dashboard
         response_home = self.client.get(reverse('customer_home'))
         self.assertEqual(response_home.status_code, 302)
-        self.assertRedirects(response_home, reverse('shop_dashboard', args=[branch.id]))
+        self.assertRedirects(response_home, reverse('shop_dashboard', args=[branch.id]))
+
+    def test_shop_dashboard_redirects_restaurant_to_kitchen_dashboard(self):
+        from organization.models import Service_Category
+        restaurant_cat = Service_Category.objects.create(name='restaurant')
+        org = Organization.objects.create(name='Test Restaurant Org', email='rest@test.com', phone='1234567890')
+        restaurant_branch = Branch.objects.create(
+            name='Test Restaurant Branch',
+            organization=org,
+            services_category=restaurant_cat
+        )
+
+        user = User.objects.create_user(username='test_rest_admin', password='testpass')
+        from login.models import UserProfile
+        UserProfile.objects.create(
+            user=user,
+            role='branch_admin',
+            branch=restaurant_branch,
+            organization=org
+        )
+
+        self.client.login(username='test_rest_admin', password='testpass')
+
+        response = self.client.get(reverse('shop_dashboard', args=[restaurant_branch.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response,
+            reverse('restaurants:kitchen_dashboard', args=[restaurant_branch.id])
+        )
+
+    def test_customer_dashboard_includes_restaurant_category(self):
+        from organization.models import Service_Category
+        grooming_cat = Service_Category.objects.create(name='Personal Grooming')
+        restaurant_cat = Service_Category.objects.create(name='restaurant')
+        
+        user = User.objects.create_user(username='cust_test', password='testpass')
+        self.client.login(username='cust_test', password='testpass')
+        
+        response = self.client.get(reverse('customer_dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, grooming_cat.name)
+        self.assertContains(response, restaurant_cat.name)
+
+    def test_services_list_redirects_restaurant_category_to_restaurant_search(self):
+        from organization.models import Service_Category
+        restaurant_cat = Service_Category.objects.create(name='restaurant')
+        
+        user = User.objects.create_user(username='cust_test_2', password='testpass')
+        self.client.login(username='cust_test_2', password='testpass')
+        
+        response = self.client.get(reverse('services_list', args=[restaurant_cat.id]))
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('restaurants:restaurant_search'))
+
+    def test_branch_services_redirects_restaurant_branch_to_menu(self):
+        from organization.models import Service_Category
+        restaurant_cat = Service_Category.objects.create(name='restaurant')
+        org = Organization.objects.create(name='Test Rest Org', email='rest2@test.com', phone='1234567890')
+        restaurant_branch = Branch.objects.create(
+            name='Test Restaurant Branch 2',
+            organization=org,
+            services_category=restaurant_cat
+        )
+        
+        user = User.objects.create_user(username='cust_test_3', password='testpass')
+        self.client.login(username='cust_test_3', password='testpass')
+        
+        response = self.client.get(reverse('branch_services', args=[restaurant_branch.id]))
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('restaurants:menu_view', args=[restaurant_branch.id]))

@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+
+{% block title %}Restaurant Search - QuickQueue{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+    }
+    .nav-tabs {
+        border-bottom: 2px solid rgba(0,0,0,0.05);
+    }
+    .nav-tabs .nav-link {
+        border: none;
+        color: #6c757d;
+        font-weight: 600;
+        padding: 1rem 1.5rem;
+        transition: all 0.2s;
+    }
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        background: transparent;
+        border-bottom: 3px solid #0d6efd;
+    }
+    .restaurant-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .restaurant-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .badge-premium {
+        background: linear-gradient(135deg, #ffc107, #ff9800);
+        color: #000;
+        font-weight: 700;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-10">
+        <div class="search-card p-4 p-md-5 mb-5">
+            <h2 class="text-center fw-bold mb-4" style="color: #2b2b2b;">
+                <i class="bi bi-egg-fried text-primary me-2"></i>Find Restaurants & Highway Pre-Orders
+            </h2>
+
+            <!-- Search Tabs -->
+            <ul class="nav nav-tabs justify-content-center mb-4" id="searchTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if search_type == 'urban' %}active{% endif %}" id="urban-tab" href="?search_type=urban" role="tab">
+                        <i class="bi bi-building me-2"></i>City / Landmarks
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link {% if search_type == 'highway' %}active{% endif %}" id="highway-tab" href="?search_type=highway" role="tab">
+                        <i class="bi bi-compass me-2"></i>Highway Route
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Search Forms -->
+            <div class="tab-content" id="searchTabsContent">
+                <!-- Urban Search Form -->
+                {% if search_type == 'urban' %}
+                <form method="GET" action="" class="row g-3 justify-content-center" id="urban-search-form">
+                    <input type="hidden" name="search_type" value="urban">
+                    
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label small fw-bold">Search Criteria</label>
+                        <select name="criteria" id="criteria-select" class="form-select py-2.5">
+                            <option value="city" {% if request.GET.criteria == 'city' %}selected{% endif %}>By City</option>
+                            <option value="landmark" {% if request.GET.criteria == 'landmark' %}selected{% endif %}>By Landmark</option>
+                            <option value="pin_code" {% if request.GET.criteria == 'pin_code' %}selected{% endif %}>By Pin Code</option>
+                            <option value="text" {% if request.GET.criteria == 'text' or not request.GET.criteria %}selected{% endif %}>Free Text Search</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Value Select for City -->
+                    <div class="col-md-5 col-lg-5 criteria-value-field" id="field-city">
+                        <label class="form-label small fw-bold">Select City</label>
+                        <select class="form-select py-2.5" id="select-city">
+                            <option value="">-- Choose City --</option>
+                            {% for city in cities %}
+                            <option value="{{ city }}" {% if request.GET.selected_val == city %}selected{% endif %}>{{ city }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Value Select for Landmark -->
+                    <div class="col-md-5 col-lg-5 criteria-value-field" id="field-landmark" style="display: none;">
+                        <label class="form-label small fw-bold">Select Landmark</label>
+                        <select class="form-select py-2.5" id="select-landmark">
+                            <option value="">-- Choose Landmark --</option>
+                            {% for landmark in landmarks %}
+                            <option value="{{ landmark }}" {% if request.GET.selected_val == landmark %}selected{% endif %}>{{ landmark }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Value Select for Pin Code -->
+                    <div class="col-md-5 col-lg-5 criteria-value-field" id="field-pin_code" style="display: none;">
+                        <label class="form-label small fw-bold">Select Pin Code</label>
+                        <select class="form-select py-2.5" id="select-pin_code">
+                            <option value="">-- Choose Pin Code --</option>
+                            {% for pc in pin_codes %}
+                            <option value="{{ pc }}" {% if request.GET.selected_val == pc %}selected{% endif %}>{{ pc }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Text Search input -->
+                    <div class="col-md-5 col-lg-5 criteria-value-field" id="field-text" style="display: none;">
+                        <label class="form-label small fw-bold">Enter Keyword</label>
+                        <input type="text" name="q" class="form-control py-2.5 shadow-none" placeholder="Search restaurant name, locality, etc..." value="{{ request.GET.q }}">
+                    </div>
+
+                    <div class="col-md-3 col-lg-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100 py-2.5 fw-bold">Search</button>
+                    </div>
+                </form>
+                {% endif %}
+
+                <!-- Highway Search Form -->
+                {% if search_type == 'highway' %}
+                <form method="GET" action="" class="row g-3 justify-content-center">
+                    <input type="hidden" name="search_type" value="highway">
+                    
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small fw-bold">Select Highway</label>
+                        <select name="highway" id="highway-select" class="form-select py-2.5" required>
+                            <option value="">-- Select --</option>
+                            {% for hw in highways %}
+                            <option value="{{ hw.id }}" {% if request.GET.highway == hw.id|stringformat:"s" %}selected{% endif %}>{{ hw.name }} ({{ hw.start_point }} to {{ hw.end_point }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small fw-bold">Journey Segment</label>
+                        <select name="segment" id="segment-select" class="form-select py-2.5">
+                            <option value="">-- Custom / Manual --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small fw-bold">Location (KM Marker)</label>
+                        <input type="number" step="0.1" name="current_km" id="current-km-input" class="form-control py-2.5" placeholder="e.g. 120" value="{{ request.GET.current_km|default:'0' }}" required>
+                    </div>
+
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small fw-bold">Travel Direction</label>
+                        <select name="direction" id="direction-select" class="form-select py-2.5">
+                            <option value="UP" {% if request.GET.direction == 'UP' %}selected{% endif %}>UP (Towards End)</option>
+                            <option value="DOWN" {% if request.GET.direction == 'DOWN' %}selected{% endif %}>DOWN (Towards Start)</option>
+                            <option value="BOTH" {% if request.GET.direction == 'BOTH' or not request.GET.direction %}selected{% endif %}>Both / Any</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-1">
+                        <label class="form-label small fw-bold">Radius</label>
+                        <input type="number" name="range_km" id="range-km-input" class="form-control py-2.5 px-2" value="{{ request.GET.range_km|default:'50' }}" required>
+                    </div>
+
+                    <div class="col-12 col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100 py-2.5 fw-bold">Find Food</button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Search Results -->
+        <h4 class="fw-bold mb-4 text-dark">
+            {% if search_type == 'highway' and selected_highway %}
+                Upcoming Restaurants on {{ selected_highway.name }}
+            {% else %}
+                Available Restaurants
+            {% endif %}
+            <span class="badge bg-secondary-subtle text-dark fs-6 ms-2">{{ branches|length }} Found</span>
+        </h4>
+
+        <div class="row g-4">
+            {% for branch in branches %}
+            <div class="col-12 col-md-6 col-lg-6">
+                <div class="card h-100 restaurant-card shadow-sm">
+                    <div class="row g-0 h-100">
+                        <div class="col-4 bg-light d-flex align-items-center justify-content-center border-end">
+                            <i class="bi bi-shop text-muted" style="font-size: 3rem;"></i>
+                        </div>
+                        <div class="col-8">
+                            <div class="card-body d-flex flex-column justify-content-between h-100 p-3">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <h5 class="card-title fw-bold text-dark mb-0">{{ branch.name }}</h5>
+                                        {% if branch.highway_info.is_exclusive %}
+                                        <span class="badge badge-premium rounded-pill px-2 py-1 small">Exclusive</span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="card-text text-muted mb-2 small"><i class="bi bi-geo-alt-fill me-1"></i>{{ branch.locality }}, {{ branch.city }}</p>
+                                    
+                                    <!-- Landmarks info -->
+                                    {% if branch.landmarks.all %}
+                                    <div class="mb-2">
+                                        {% for landmark in branch.landmarks.all %}
+                                        <span class="badge bg-light text-dark border me-1 small"><i class="bi bi-pin-angle-fill text-danger me-1"></i>{{ landmark.name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Highway info -->
+                                    {% if branch.highway_info %}
+                                    <div class="bg-primary-subtle text-primary rounded px-2 py-1 mb-3 small d-inline-block">
+                                        <i class="bi bi-signpost-split-fill me-1"></i>
+                                        <strong>{{ branch.highway_info.highway.name }}</strong> at KM {{ branch.highway_info.milestone_km }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <a href="{% url 'restaurants:menu_view' branch.id %}" class="btn btn-primary btn-sm w-100 fw-bold py-2 mt-2">
+                                    <i class="bi bi-journal-richtext me-2"></i>View Menu & Order
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white-50">
+                    <i class="bi bi-search text-muted display-1 mb-3"></i>
+                    <h5 class="fw-bold">No restaurants found</h5>
+                    <p class="text-muted mb-0">Try searching for a different city, milestone, highway, or landmark.</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if search_type == 'highway' %}
+<script id="highway-segments-data" type="application/json">
+{
+    {% for hw in highways %}
+    "{{ hw.id }}": [
+        {% for seg in hw.segments.all %}
+        {
+            "id": "{{ seg.id }}",
+            "start_place": "{{ seg.start_place|escapejs }}",
+            "end_place": "{{ seg.end_place|escapejs }}",
+            "start_km": "{{ seg.start_km }}",
+            "end_km": "{{ seg.end_km }}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]{% if not forloop.last %},{% endif %}
+    {% endfor %}
+}
+</script>
+{% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const criteriaSelect = document.getElementById("criteria-select");
+        if (criteriaSelect) {
+            const fields = {
+                city: document.getElementById("field-city"),
+                landmark: document.getElementById("field-landmark"),
+                pin_code: document.getElementById("field-pin_code"),
+                text: document.getElementById("field-text")
+            };
+            
+            const selectInputs = {
+                city: document.getElementById("select-city"),
+                landmark: document.getElementById("select-landmark"),
+                pin_code: document.getElementById("select-pin_code")
+            };
+
+            function updateFields() {
+                const selected = criteriaSelect.value;
+                
+                // Hide all fields, remove name attribute to prevent submission
+                Object.keys(fields).forEach(key => {
+                    fields[key].style.display = "none";
+                    if (selectInputs[key]) {
+                        selectInputs[key].removeAttribute("name");
+                    }
+                });
+                
+                // Show selected field, restore name attribute for values
+                fields[selected].style.display = "block";
+                if (selectInputs[selected]) {
+                    selectInputs[selected].setAttribute("name", "selected_val");
+                }
+            }
+
+            criteriaSelect.addEventListener("change", updateFields);
+            
+            // Initial load
+            updateFields();
+        }
+
+        // Highway Segment dynamic population & auto-fill logic
+        const highwaySelect = document.getElementById("highway-select");
+        const segmentSelect = document.getElementById("segment-select");
+        const currentKmInput = document.getElementById("current-km-input");
+        const directionSelect = document.getElementById("direction-select");
+        const segmentsDataEl = document.getElementById("highway-segments-data");
+        
+        if (highwaySelect && segmentSelect && segmentsDataEl) {
+            const segmentsData = JSON.parse(segmentsDataEl.textContent || '{}');
+            const selectedSegmentId = "{{ selected_segment_id }}";
+
+            function populateSegments(selectedHwId, selectVal = "") {
+                // Clear existing options except first
+                segmentSelect.innerHTML = '<option value="">-- Custom / Manual --</option>';
+                
+                const segments = segmentsData[selectedHwId] || [];
+                segments.forEach(seg => {
+                    const opt = document.createElement("option");
+                    opt.value = seg.id;
+                    opt.textContent = `${seg.start_place} to ${seg.end_place} (KM ${parseFloat(seg.start_km)} -> ${parseFloat(seg.end_km)})`;
+                    opt.dataset.startKm = seg.start_km;
+                    opt.dataset.endKm = seg.end_km;
+                    
+                    if (seg.id === selectVal) {
+                        opt.selected = true;
+                    }
+                    segmentSelect.appendChild(opt);
+                });
+            }
+
+            function handleSegmentChange() {
+                const selectedOpt = segmentSelect.options[segmentSelect.selectedIndex];
+                if (selectedOpt && selectedOpt.value !== "") {
+                    const startKm = parseFloat(selectedOpt.dataset.startKm);
+                    const endKm = parseFloat(selectedOpt.dataset.endKm);
+                    
+                    currentKmInput.value = startKm;
+                    if (startKm < endKm) {
+                        directionSelect.value = "UP";
+                    } else if (startKm > endKm) {
+                        directionSelect.value = "DOWN";
+                    } else {
+                        directionSelect.value = "BOTH";
+                    }
+                }
+            }
+
+            highwaySelect.addEventListener("change", function() {
+                populateSegments(highwaySelect.value);
+                // Clear inputs when highway changes
+                currentKmInput.value = "0";
+                directionSelect.value = "BOTH";
+            });
+
+            segmentSelect.addEventListener("change", handleSegmentChange);
+
+            // Initial population on page load
+            if (highwaySelect.value) {
+                populateSegments(highwaySelect.value, selectedSegmentId);
+            }
+        }
+    });
+</script>
+{% endblock %}

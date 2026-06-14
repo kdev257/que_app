@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - QuickQueue{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4 bg-white">
+            <div class="card-header bg-gradient-primary text-white py-4 px-4 border-0 position-relative overflow-hidden" style="background: linear-gradient(135deg, #0d6efd, #0b5ed7);">
+                <h4 class="fw-bold mb-1"><i class="bi bi-shield-check me-2"></i>Select Order Options</h4>
+                <p class="mb-0 text-white-50 small">Finalize your food pre-order at {{ branch.name }}</p>
+            </div>
+            
+            <div class="card-body p-4 p-md-5">
+                <form method="POST" action="">
+                    {% csrf_token %}
+                    
+                    <!-- Order Type Selection -->
+                    <h5 class="fw-bold mb-3 text-dark">Order Type</h5>
+                    <div class="row g-3 mb-4">
+                        <div class="{% if is_delivery_available %}col-4{% else %}col-6{% endif %}">
+                            <input type="radio" class="btn-check" name="order_type" id="order_dine" value="dine_in" checked>
+                            <label class="btn btn-outline-primary btn-lg w-100 py-3 rounded-3" for="order_dine">
+                                <i class="bi bi-house-door fs-4 d-block mb-1"></i>
+                                <span class="fw-bold">Dine-In</span>
+                            </label>
+                        </div>
+                        <div class="{% if is_delivery_available %}col-4{% else %}col-6{% endif %}">
+                            <input type="radio" class="btn-check" name="order_type" id="order_take" value="takeaway">
+                            <label class="btn btn-outline-primary btn-lg w-100 py-3 rounded-3" for="order_take">
+                                <i class="bi bi-bag-check fs-4 d-block mb-1"></i>
+                                <span class="fw-bold">Takeaway</span>
+                            </label>
+                        </div>
+                        {% if is_delivery_available %}
+                        <div class="col-4">
+                            <input type="radio" class="btn-check" name="order_type" id="order_delivery" value="delivery">
+                            <label class="btn btn-outline-primary btn-lg w-100 py-3 rounded-3" for="order_delivery">
+                                <i class="bi bi-truck fs-4 d-block mb-1"></i>
+                                <span class="fw-bold">Delivery</span>
+                            </label>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Table Selection (Dine-In only) -->
+                    <div id="table-selection-section" class="mb-4">
+                        <h5 class="fw-bold mb-2 text-dark">Select Table</h5>
+                        <p class="text-muted small mb-3">Choose a free table to seat your party</p>
+                        
+                        <select name="table" class="form-select form-select-lg py-3 rounded-3">
+                            <option value="">-- Seat Me Automatically --</option>
+                            {% for table in tables %}
+                            <option value="{{ table.id }}">Table {{ table.table_number }} (Capacity: {{ table.capacity }} Pax)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    {% if is_delivery_available %}
+                    <!-- Delivery Address Section -->
+                    <div id="delivery-address-section" class="mb-4" style="display: none;">
+                        <h5 class="fw-bold mb-2 text-dark"><i class="bi bi-geo-alt-fill text-danger me-2"></i>Delivery Address</h5>
+                        <p class="text-muted small mb-3">Provide the address where you want your food delivered.</p>
+                        <textarea name="delivery_address" id="delivery_address" rows="3" 
+                                  class="form-control form-control-lg rounded-3" placeholder="Enter your delivery address...">{{ user_address }}</textarea>
+                    </div>
+
+                    <!-- Payment Method Section -->
+                    <div id="payment-method-section" class="mb-4" style="display: none;">
+                        <h5 class="fw-bold mb-3 text-dark">Payment Option</h5>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="payment_option" id="pay_online" value="online" checked>
+                                <label class="btn btn-outline-primary btn-lg w-100 py-3 rounded-3" for="pay_online">
+                                    <i class="bi bi-credit-card fs-4 d-block mb-1"></i>
+                                    <span class="fw-bold">Pay Online</span>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="payment_option" id="pay_home" value="pay_at_home">
+                                <label class="btn btn-outline-primary btn-lg w-100 py-3 rounded-3" for="pay_home">
+                                    <i class="bi bi-cash-coin fs-4 d-block mb-1"></i>
+                                    <span class="fw-bold">Pay at Home</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Expected Arrival (Minutes Away) -->
+                    <div class="mb-4">
+                        <h5 class="fw-bold mb-2 text-dark" id="minutes-until-arrival-title"><i class="bi bi-hourglass-split me-2 text-primary"></i>How soon will you arrive?</h5>
+                        <p class="text-muted small mb-3" id="minutes-until-arrival-desc">Let the kitchen know how many minutes away you are so they can time your order perfectly.</p>
+                        <div class="input-group input-group-lg">
+                            <input type="number" name="minutes_until_arrival" id="minutes_until_arrival"
+                                   class="form-control form-control-lg py-3 rounded-start-3"
+                                   min="5" max="180" step="5" placeholder="e.g. 30" required>
+                            <span class="input-group-text bg-primary text-white fw-bold rounded-end-3">minutes</span>
+                        </div>
+                        <div class="form-text mt-1"><i class="bi bi-info-circle me-1"></i>The kitchen will start preparing your order accordingly.</div>
+                    </div>
+
+                    <div class="bg-light p-4 rounded-4 mb-4">
+                        <h5 class="fw-bold mb-3 text-dark">Order Details</h5>
+                        <ul class="list-unstyled mb-0">
+                            {% for item in cart_items %}
+                            <li class="d-flex justify-content-between mb-2 small text-muted">
+                                <span>{{ item.menu_item.name }} (x{{ item.quantity }})</span>
+                                <span>₹{{ item.total_price }}</span>
+                            </li>
+                            {% endfor %}
+                            <hr class="my-3">
+                            <li class="d-flex justify-content-between h6 fw-bold mb-0 text-dark">
+                                <span>Subtotal</span>
+                                <span>₹{{ subtotal }}</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Submit pre-order -->
+                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill shadow fw-bold py-3 mt-3">
+                        <i class="bi bi-check-circle-fill me-2"></i>Place Pre-Order
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const dineRadio = document.getElementById("order_dine");
+        const takeRadio = document.getElementById("order_take");
+        const deliveryRadio = document.getElementById("order_delivery");
+        
+        const tableSection = document.getElementById("table-selection-section");
+        const deliverySection = document.getElementById("delivery-address-section");
+        const paymentSection = document.getElementById("payment-method-section");
+        
+        const arrivalTitle = document.getElementById("minutes-until-arrival-title");
+        const arrivalDesc = document.getElementById("minutes-until-arrival-desc");
+        const arrivalInput = document.getElementById("minutes_until_arrival");
+
+        function toggleSections() {
+            if (dineRadio && dineRadio.checked) {
+                if (tableSection) tableSection.style.display = "block";
+                if (deliverySection) deliverySection.style.display = "none";
+                if (paymentSection) paymentSection.style.display = "none";
+                if (deliverySection) document.getElementById("delivery_address").required = false;
+                
+                if (arrivalTitle) arrivalTitle.innerHTML = '<i class="bi bi-hourglass-split me-2 text-primary"></i>How soon will you arrive?';
+                if (arrivalDesc) arrivalDesc.textContent = 'Let the kitchen know how many minutes away you are so they can time your order perfectly.';
+            } else if (takeRadio && takeRadio.checked) {
+                if (tableSection) tableSection.style.display = "none";
+                if (deliverySection) deliverySection.style.display = "none";
+                if (paymentSection) paymentSection.style.display = "none";
+                if (deliverySection) document.getElementById("delivery_address").required = false;
+                
+                if (arrivalTitle) arrivalTitle.innerHTML = '<i class="bi bi-hourglass-split me-2 text-primary"></i>How soon will you arrive?';
+                if (arrivalDesc) arrivalDesc.textContent = 'Let the kitchen know how many minutes away you are so they can time your order perfectly.';
+            } else if (deliveryRadio && deliveryRadio.checked) {
+                if (tableSection) tableSection.style.display = "none";
+                if (deliverySection) deliverySection.style.display = "block";
+                if (paymentSection) paymentSection.style.display = "block";
+                if (deliverySection) document.getElementById("delivery_address").required = true;
+                
+                if (arrivalTitle) arrivalTitle.innerHTML = '<i class="bi bi-hourglass-split me-2 text-primary"></i>Preferred delivery time?';
+                if (arrivalDesc) arrivalDesc.textContent = 'Let the kitchen know how many minutes from now you want the food delivered to your home.';
+            }
+        }
+        
+        if (dineRadio) dineRadio.addEventListener("change", toggleSections);
+        if (takeRadio) takeRadio.addEventListener("change", toggleSections);
+        if (deliveryRadio) deliveryRadio.addEventListener("change", toggleSections);
+        
+        // Initial call
+        toggleSections();
+    });
+</script>
+{% endblock %}

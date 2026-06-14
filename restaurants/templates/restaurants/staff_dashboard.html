@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Staff Dashboard - {{ branch.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .staff-card {
+        border-radius: 14px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        background-color: #ffffff;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .staff-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.08) !important;
+    }
+    .section-column {
+        border-radius: 16px;
+        background-color: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        padding: 1.5rem;
+        min-height: 60vh;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+    .status-badge-ready {
+        animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+        0% { opacity: 0.7; }
+        50% { opacity: 1; }
+        100% { opacity: 0.7; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-12 col-md-8">
+        <h2 class="fw-bold mb-0 text-dark"><i class="bi bi-people-fill text-primary me-2"></i>Staff Dashboard</h2>
+        <p class="text-muted mb-0">{{ branch.name }} • Monitor customer flow, service, and table occupancy</p>
+    </div>
+    <div class="col-12 col-md-4 text-md-end mt-3 mt-md-0">
+        <span class="badge bg-primary-subtle text-primary border px-3 py-2 fs-6 rounded-pill d-inline-flex align-items-center">
+            <span class="spinner-grow spinner-grow-sm text-primary me-2" role="status"></span>Waiter Mode Active
+        </span>
+    </div>
+</div>
+
+{% include "restaurants/partials/staff_orders_list.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Pause HTMX updates if any interaction is happening (e.g. standard modals or future dialogs)
+    // Here we can also add any specific custom JS if needed.
+</script>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}{{ branch.name }} Menu - QuickQueue{% endblock %}
+
+{% block extra_css %}
+<style>
+    .menu-header {
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        color: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .category-section {
+        margin-bottom: 3rem;
+    }
+    .menu-item-card {
+        border: none;
+        border-radius: 12px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .menu-item-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+    }
+    .dot-veg {
+        width: 12px;
+        height: 12px;
+        background-color: #198754;
+        border-radius: 2px;
+        display: inline-block;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px #198754;
+    }
+    .dot-nonveg {
+        width: 12px;
+        height: 12px;
+        background-color: #dc3545;
+        border-radius: 2px;
+        display: inline-block;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px #dc3545;
+    }
+    .floating-cart {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 1000;
+        box-shadow: 0 4px 20px rgba(13,110,253,0.4);
+        border: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-9">
+        <!-- Floating Cart button -->
+        {% if cart_count > 0 %}
+        <a href="{% url 'restaurants:view_order_cart' %}" class="btn btn-primary btn-lg rounded-pill px-4 py-3 floating-cart d-flex align-items-center">
+            <i class="bi bi-cart-fill me-2 fs-5"></i>
+            <span class="fw-bold">View Cart</span>
+            <span class="badge bg-white text-primary ms-2 rounded-circle fs-6 px-2 py-1">{{ cart_count }}</span>
+        </a>
+        {% endif %}
+
+        <!-- Menu Header Banner -->
+        <div class="menu-header p-4 p-md-5 mb-5 text-center position-relative overflow-hidden">
+            <h1 class="fw-bold mb-2">{{ branch.name }}</h1>
+            <p class="mb-3 opacity-75"><i class="bi bi-geo-alt-fill me-1"></i>{{ branch.address }}, {{ branch.city }}</p>
+            {% if branch.highway_info %}
+            <span class="badge bg-white-50 text-white rounded-pill px-3 py-1.5 fs-6">
+                <i class="bi bi-compass me-1"></i>Highway {{ branch.highway_info.highway.name }} (KM {{ branch.highway_info.milestone_km }})
+            </span>
+            {% endif %}
+        </div>
+
+        <!-- Categories & Menu Items -->
+        {% for category in categories %}
+        <div class="category-section" id="cat-{{ category.id }}">
+            <h3 class="fw-bold border-bottom pb-2 mb-4 text-dark">{{ category.name }}</h3>
+            
+            <div class="row g-3">
+                {% for item in category.menu_items.all %}
+                <div class="col-12">
+                    <div class="card menu-item-card p-3 shadow-sm bg-white">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="d-flex align-items-start">
+                                <!-- Veg/Non-veg Dot -->
+                                <div class="me-3 mt-1.5">
+                                    {% if item.is_veg %}
+                                    <span class="dot-veg" title="Vegetarian"></span>
+                                    {% else %}
+                                    <span class="dot-nonveg" title="Non-Vegetarian"></span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-1">{{ item.name }}</h5>
+                                    <p class="text-muted small mb-0">{{ item.description }}</p>
+                                    <span class="h6 fw-bold text-primary d-block mt-2">₹{{ item.price }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Add to cart form -->
+                            {% if item.is_available %}
+                            <form method="POST" action="{% url 'restaurants:add_to_order_cart' %}" class="d-flex align-items-center">
+                                {% csrf_token %}
+                                <input type="hidden" name="menu_item_id" value="{{ item.id }}">
+                                <input type="hidden" name="branch_id" value="{{ branch.id }}">
+                                <div class="input-group input-group-sm me-2" style="width: 100px;">
+                                    <input type="number" name="quantity" class="form-control text-center py-2" value="1" min="1" max="10">
+                                </div>
+                                <button type="submit" class="btn btn-outline-primary btn-sm px-3 fw-bold py-2">
+                                    <i class="bi bi-plus-lg me-1"></i>Add
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="badge bg-danger-subtle text-danger px-3 py-2 fw-semibold">Sold Out</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-3">
+                    <p class="text-muted">No items in this category.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
+            <i class="bi bi-menu-app text-muted display-1 mb-3"></i>
+            <h5 class="fw-bold">Menu is currently empty</h5>
+            <p class="text-muted mb-0">The restaurant has not listed any food categories or items yet.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

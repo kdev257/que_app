@@ -84,6 +84,7 @@ class Token(models.Model):
             ('unpaid', 'Unpaid'),
             ('paid', 'Paid'),
             ('pay_at_shop', 'Pay at Shop'),
+            ('pay_at_home', 'Pay at Home'),
             ('refunded', 'Refunded'),
         ],
         default='unpaid'

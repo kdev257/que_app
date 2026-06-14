@@ -37,6 +37,10 @@ def user_login(request):
                 login(request, user)
                 messages.success(request, f'Welcome back, {user.username}!')
                 
+                next_url = request.GET.get('next') or request.POST.get('next')
+                if next_url:
+                    return redirect(next_url)
+                
                 # Use try-except or a safer query to prevent crashes
                 try:
                     user_profile = user.user_profile # Assumes related_name='user_profile'
@@ -44,6 +48,8 @@ def user_login(request):
                         return redirect('customer_dashboard')
                     elif user_profile.role == 'branch_admin':
                         return redirect('shop_dashboard', id=user_profile.branch.id)
+                    elif user_profile.role == 'staff':
+                        return redirect('restaurants:staff_dashboard', branch_id=user_profile.branch.id)
                     else:
                         return redirect('admin')
                 except UserProfile.DoesNotExist:
@@ -79,6 +85,11 @@ def guest_login(request):
             request.session['guest_id'] = guest.id
             request.session.modified = True
             messages.success(request, f'Welcome, {guest.name}! You have logged in as a guest.')
+            
+            next_url = request.GET.get('next') or request.POST.get('next')
+            if next_url:
+                return redirect(next_url)
+                
             return redirect('customer_dashboard')
         else:
             messages.error(request, 'Guest login failed. Please correct the errors below.')

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Kitchen Dashboard - {{ branch.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-col {
+        border-radius: 12px;
+        background-color: rgba(248, 249, 250, 0.85);
+        padding: 1.25rem;
+        min-height: 70vh;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+    .order-ticket {
+        border-left: 5px solid #0d6efd;
+        border-radius: 8px;
+        background-color: white;
+        transition: transform 0.2s;
+    }
+    .order-ticket:hover {
+        transform: scale(1.02);
+    }
+    .order-pending {
+        border-left-color: #f59e0b;
+    }
+    .order-preparing {
+        border-left-color: #3b82f6;
+    }
+    .order-ready {
+        border-left-color: #10b981;
+    }
+    .table-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+    }
+    .table-box {
+        border-radius: 8px;
+        padding: 0.75rem;
+        text-align: center;
+        font-weight: bold;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    .table-vacant {
+        background-color: #d1e7dd;
+        color: #0f5132;
+        border: 1px solid #badbcc;
+    }
+    .table-occupied {
+        background-color: #f8d7da;
+        color: #842029;
+        border: 1px solid #f5c2c7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-0 text-dark"><i class="bi bi-fire text-danger me-2"></i>Kitchen Dashboard</h2>
+            <p class="text-muted mb-0">{{ branch.name }} • Manage incoming and active orders</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if not branch.highway_info %}
+            <form method="POST" action="{% url 'restaurants:toggle_delivery_status' branch.id %}" class="d-inline">
+                {% csrf_token %}
+                {% if branch.offers_delivery %}
+                <button type="submit" class="btn btn-outline-danger fw-semibold d-flex align-items-center gap-2">
+                    <i class="bi bi-truck-flatbed"></i> Stop Delivery
+                </button>
+                {% else %}
+                <button type="submit" class="btn btn-outline-success fw-semibold d-flex align-items-center gap-2">
+                    <i class="bi bi-truck"></i> Start Delivery
+                </button>
+                {% endif %}
+            </form>
+            {% endif %}
+            <a href="{% url 'shop_dashboard' branch.id %}" class="btn btn-outline-secondary fw-semibold">
+                <i class="bi bi-speedometer2 me-1"></i>Queue Dashboard
+            </a>
+            <span class="badge bg-success-subtle text-success border px-3 py-2 fs-6 rounded-pill d-flex align-items-center">
+                <span class="spinner-grow spinner-grow-sm text-success me-2" role="status"></span>Live Kitchen Active
+            </span>
+        </div>
+    </div>
+</div>
+
+{% include "restaurants/partials/kitchen_orders_list.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Pause HTMX polling if there is an active collapsible form open in the kitchen orders list
+    document.addEventListener('htmx:beforeRequest', function(evt) {
+        if (document.querySelector('#kitchen-orders-content .collapse.show, #kitchen-orders-content .collapsing')) {
+            evt.preventDefault();
+        }
+    });
+</script>
+{% endblock %}
+

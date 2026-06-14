@@ -1,0 +1,204 @@
+<div id="staff-orders-content" hx-get="{% url 'restaurants:staff_dashboard' branch.id %}" hx-trigger="every 5s" hx-swap="outerHTML">
+<div class="row g-4">
+    
+    <!-- COLUMN 1: AWAITING ARRIVAL -->
+    <div class="col-12 col-lg-4">
+        <div class="section-column shadow-sm">
+            <h5 class="fw-bold text-dark mb-4 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-geo-alt me-2 text-secondary"></i>Awaiting Arrival</span>
+                <span class="badge bg-secondary-subtle text-secondary border">
+                    {{ awaiting_arrival.count }}
+                </span>
+            </h5>
+            
+            {% for order in awaiting_arrival %}
+            <div class="card staff-card shadow-sm mb-3 p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-light text-dark fw-bold border">Token #{{ order.token.token_number }}</span>
+                    <small class="text-muted">
+                        {% if order.order_type == 'dine_in' %}
+                        <span class="text-primary fw-medium"><i class="bi bi-house-door me-1"></i>Dine-In</span>
+                        {% elif order.order_type == 'delivery' %}
+                        <span class="text-danger fw-medium"><i class="bi bi-geo-alt me-1"></i>Delivery</span>
+                        {% else %}
+                        <span class="text-success fw-medium"><i class="bi bi-bag me-1"></i>Takeaway</span>
+                        {% endif %}
+                    </small>
+                </div>
+                
+                <div class="mb-2">
+                    <div class="fw-semibold text-dark">{{ order.customer_name }}</div>
+                    {% if order.customer_phone %}
+                    <a href="tel:{{ order.customer_phone }}" class="text-muted small"><i class="bi bi-telephone me-1"></i>{{ order.customer_phone }}</a>
+                    {% endif %}
+                </div>
+                {% if order.order_type == 'delivery' and order.delivery_address %}
+                <div class="mb-2 small text-muted">
+                    <i class="bi bi-geo-alt-fill text-danger me-1"></i><strong>Delivery Address:</strong> {{ order.delivery_address }}
+                </div>
+                {% endif %}
+
+                {% if order.order_type == 'dine_in' and order.table %}
+                <div class="mb-2">
+                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                        Table {{ order.table.table_number }}
+                    </span>
+                </div>
+                {% endif %}
+
+                <div class="border-top pt-2 mt-2">
+                    <div class="small fw-semibold text-muted mb-1">Items:</div>
+                    <ul class="list-unstyled mb-3 small text-muted">
+                        {% for item in order.items.all %}
+                        <li>{{ item.quantity }} x {{ item.menu_item.name }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <a href="{% url 'restaurants:staff_mark_arrived' order.id %}" class="btn btn-warning btn-sm w-100 fw-bold rounded-pill text-dark shadow-sm">
+                    <i class="bi bi-check-circle me-1"></i>Customer Arrived
+                </a>
+            </div>
+            {% empty %}
+            <div class="text-center py-5 text-muted opacity-75">
+                <i class="bi bi-check-all display-6 d-block mb-2"></i>
+                No customers awaiting arrival.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- COLUMN 2: AWAITING SERVICE -->
+    <div class="col-12 col-lg-4">
+        <div class="section-column shadow-sm">
+            <h5 class="fw-bold text-dark mb-4 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-fire me-2 text-warning"></i>Awaiting Service</span>
+                <span class="badge bg-warning-subtle text-warning border">
+                    {{ awaiting_service.count }}
+                </span>
+            </h5>
+            
+            {% for order in awaiting_service %}
+            <div class="card staff-card shadow-sm mb-3 p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-light text-dark fw-bold border">Token #{{ order.token.token_number }}</span>
+                    {% if order.status == 'ready' %}
+                    <span class="badge bg-success status-badge-ready text-white px-2.5 py-1">
+                        <span class="spinner-grow spinner-grow-sm me-1" role="status"></span>Ready to Serve
+                    </span>
+                    {% else %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2.5 py-1">
+                        Preparing ({{ order.estimated_prep_time_minutes }}m)
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-2">
+                    <div class="fw-semibold text-dark">{{ order.customer_name }}</div>
+                    {% if order.customer_phone %}
+                    <a href="tel:{{ order.customer_phone }}" class="text-muted small"><i class="bi bi-telephone me-1"></i>{{ order.customer_phone }}</a>
+                    {% endif %}
+                </div>
+                {% if order.order_type == 'delivery' and order.delivery_address %}
+                <div class="mb-2 small text-muted">
+                    <i class="bi bi-geo-alt-fill text-danger me-1"></i><strong>Delivery Address:</strong> {{ order.delivery_address }}
+                </div>
+                {% endif %}
+
+                {% if order.order_type == 'dine_in' and order.table %}
+                <div class="mb-2">
+                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                        Table {{ order.table.table_number }}
+                    </span>
+                </div>
+                {% endif %}
+
+                <div class="border-top pt-2 mt-2">
+                    <div class="small fw-semibold text-muted mb-1">Items:</div>
+                    <ul class="list-unstyled mb-3 small text-muted">
+                        {% for item in order.items.all %}
+                        <li>{{ item.quantity }} x {{ item.menu_item.name }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                {% if order.status == 'ready' %}
+                <a href="{% url 'restaurants:staff_mark_served' order.id %}" class="btn btn-success btn-sm w-100 fw-bold rounded-pill shadow-sm">
+                    <i class="bi bi-handbag me-1"></i>Serve Food
+                </a>
+                {% else %}
+                <button class="btn btn-outline-secondary btn-sm w-100 fw-semibold rounded-pill" disabled>
+                    <i class="bi bi-hourglass-split me-1"></i>Awaiting Kitchen
+                </button>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="text-center py-5 text-muted opacity-75">
+                <i class="bi bi-egg-fried display-6 d-block mb-2"></i>
+                No active orders being prepared/served.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- COLUMN 3: CURRENTLY DINING -->
+    <div class="col-12 col-lg-4">
+        <div class="section-column shadow-sm">
+            <h5 class="fw-bold text-dark mb-4 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-chat-heart me-2 text-danger"></i>Dining / Active</span>
+                <span class="badge bg-danger-subtle text-danger border">
+                    {{ dining.count }}
+                </span>
+            </h5>
+            
+            {% for order in dining %}
+            <div class="card staff-card shadow-sm mb-3 p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-light text-dark fw-bold border">Token #{{ order.token.token_number }}</span>
+                    <span class="badge bg-info text-white px-2 py-1">Eating</span>
+                </div>
+                
+                <div class="mb-2">
+                    <div class="fw-semibold text-dark">{{ order.customer_name }}</div>
+                    {% if order.customer_phone %}
+                    <a href="tel:{{ order.customer_phone }}" class="text-muted small"><i class="bi bi-telephone me-1"></i>{{ order.customer_phone }}</a>
+                    {% endif %}
+                </div>
+                {% if order.order_type == 'delivery' and order.delivery_address %}
+                <div class="mb-2 small text-muted">
+                    <i class="bi bi-geo-alt-fill text-danger me-1"></i><strong>Delivery Address:</strong> {{ order.delivery_address }}
+                </div>
+                {% endif %}
+
+                {% if order.order_type == 'dine_in' and order.table %}
+                <div class="mb-2">
+                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                        Table {{ order.table.table_number }}
+                    </span>
+                </div>
+                {% endif %}
+
+                <div class="border-top pt-2 mt-2">
+                    <div class="small fw-semibold text-muted mb-1">Items:</div>
+                    <ul class="list-unstyled mb-3 small text-muted">
+                        {% for item in order.items.all %}
+                        <li>{{ item.quantity }} x {{ item.menu_item.name }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <a href="{% url 'restaurants:staff_mark_completed' order.id %}" class="btn btn-outline-danger btn-sm w-100 fw-bold rounded-pill shadow-sm" onclick="return confirm('Is the customer finished? This will complete the order and vacate the table.')">
+                    <i class="bi bi-trash3 me-1"></i>Mark Finished
+                </a>
+            </div>
+            {% empty %}
+            <div class="text-center py-5 text-muted opacity-75">
+                <i class="bi bi-emoji-smile display-6 d-block mb-2"></i>
+                No customers dining currently.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+</div>

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Your Order Cart - QuickQueue{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4 bg-white">
+            <div class="card-header bg-gradient-primary text-white py-4 px-4 border-0 position-relative overflow-hidden" style="background: linear-gradient(135deg, #0d6efd, #0b5ed7);">
+                <h4 class="fw-bold mb-1"><i class="bi bi-cart3 me-2"></i>Review Your Food Order</h4>
+                <p class="mb-0 text-white-50 small">Pre-ordering at {{ branch.name }}</p>
+            </div>
+            
+            <div class="card-body p-4 p-md-5">
+                <!-- Order Items list -->
+                <div class="list-group list-group-flush mb-4 rounded-3 border">
+                    {% for item in cart_items %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light-hover">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary-subtle text-primary rounded-3 p-2 me-3 small">
+                                <i class="bi bi-egg-fried"></i>
+                            </div>
+                            <div>
+                                <span class="fw-bold d-block text-dark">{{ item.menu_item.name }}</span>
+                                <small class="text-muted">Quantity: {{ item.quantity }} x ₹{{ item.menu_item.price }}</small>
+                            </div>
+                        </div>
+                        <span class="fw-bold text-dark">₹{{ item.total_price }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Billing breakdown -->
+                <div class="bg-light p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold mb-3 text-dark">Billing Summary</h5>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Subtotal</span>
+                        <span class="fw-semibold text-dark">₹{{ subtotal }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Convenience Fee</span>
+                        <span class="{% if booking_fee > 0 %}text-dark fw-semibold{% else %}text-success fw-bold{% endif %}">
+                            {% if booking_fee > 0 %}₹{{ booking_fee }}{% else %}FREE{% endif %}
+                        </span>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h5 fw-bold mb-0 text-dark">Total Amount Due</span>
+                        <span class="h4 fw-black mb-0 text-primary">₹{{ final_price }}</span>
+                    </div>
+                </div>
+
+                <!-- Checkout buttons -->
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <a href="{% url 'restaurants:checkout_order' %}" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm fw-bold py-3 hover-lift">
+                            <i class="bi bi-credit-card-2-front me-2"></i>Proceed to Checkout
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{% url 'restaurants:menu_view' branch.id %}" class="btn btn-outline-secondary btn-lg w-100 rounded-pill fw-bold py-3">
+                            <i class="bi bi-plus-lg me-2"></i>Add More Items
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -34,6 +34,7 @@ class Branch(models.Model):
     opening_time = models.TimeField(default=datetime.time(8, 0),blank=True,null=True,help_text="Format: 8:00 AM" )    
     closing_time = models.TimeField(default=datetime.time(21, 0),blank=True,null=True,help_text="Format: 9:00 PM" )
     is_open = models.BooleanField(default=False)
+    offers_delivery = models.BooleanField(default=False, help_text="Check if this branch offers home delivery")
 
     class Meta:
         ordering = ["name"]

@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <!-- Step Progress Indicator -->
+            <div class="d-flex justify-content-between align-items-center mb-5 position-relative">
+                <div class="position-absolute top-50 start-50 translate-middle w-75 bg-light-subtle progress-bar-bg" style="height: 2px; z-index: -1;">
+                    <div class="bg-primary" style="height: 2px; width: 50%;"></div>
+                </div>
+                <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 35px; height: 35px;">
+                        <i class="bi bi-cart-check-fill"></i>
+                    </div>
+                    <span class="small fw-semibold mt-2 text-muted">Review Selection</span>
+                </div>
+                <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center shadow" style="width: 40px; height: 40px; border: 4px solid var(--bs-body-bg);">
+                        <i class="bi bi-credit-card-fill"></i>
+                    </div>
+                    <span class="small fw-bold mt-2 text-primary">Secure Payment</span>
+                </div>
+                <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 35px; height: 35px;">
+                        <i class="bi bi-ticket-perforated"></i>
+                    </div>
+                    <span class="small fw-semibold mt-2 text-muted">Token Issued</span>
+                </div>
+            </div>
+
+            <!-- Main Payment Card -->
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4 bg-white">
+                <div class="card-header bg-gradient-primary text-white py-4 px-4 border-0 position-relative overflow-hidden" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6);">
+                    <div class="position-absolute top-0 end-0 opacity-10 p-3" style="transform: translate(20px, -20px);">
+                        <i class="bi bi-shield-lock-fill" style="font-size: 8rem;"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1"><i class="bi bi-shield-check me-2"></i>Complete Restaurant Payment</h4>
+                    <p class="mb-0 text-white-50 small">
+                        Online prepaid order • Non-Refundable
+                    </p>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <!-- Order Items Preview -->
+                    <h5 class="fw-bold mb-3 text-dark">Pre-Ordered Items</h5>
+                    <div class="list-group list-group-flush mb-4 rounded-3 border">
+                        {% for item in order.items.all %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3 bg-light-hover">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary-subtle text-primary rounded-3 p-2 me-3 small" style="background-color: #eff6ff; color: #2563eb;">
+                                    <i class="bi bi-egg-fried"></i>
+                                </div>
+                                <div>
+                                    <span class="fw-bold d-block text-dark">{{ item.menu_item.name }}</span>
+                                    <small class="text-muted">Quantity: {{ item.quantity }}</small>
+                                </div>
+                            </div>
+                            <span class="fw-bold text-dark">₹{{ item.price }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Payment Breakdown -->
+                    <div class="bg-light p-4 rounded-4 mb-4">
+                        <h5 class="fw-bold mb-3 text-dark">Billing Summary</h5>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Subtotal</span>
+                            <span class="fw-semibold text-dark">₹{{ subtotal }}</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Booking Convenience Fee</span>
+                            <span class="{% if booking_fee > 0 %}text-dark fw-semibold{% else %}text-success fw-bold{% endif %}">
+                                {% if booking_fee > 0 %}₹{{ booking_fee }}{% else %}FREE{% endif %}
+                            </span>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="h5 fw-bold mb-0 text-dark">Total Amount Due</span>
+                            <span class="h4 fw-black mb-0 text-primary" style="color: #2563eb;">₹{{ final_price }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex flex-column gap-3">
+                        {% if razorpay_order_id %}
+                        <button id="pay-online-btn" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm fw-bold py-3 hover-lift" style="background-color: #2563eb; border-color: #2563eb;">
+                            <i class="bi bi-credit-card me-2"></i> Pay Online (Razorpay)
+                        </button>
+                        {% else %}
+                        <button id="pay-online-btn" class="btn btn-secondary btn-lg w-100 rounded-pill fw-bold py-3" disabled>
+                            <i class="bi bi-credit-card me-2"></i> Pay Online (Gateway Offline)
+                        </button>
+                        {% endif %}
+
+                        <a href="{% url 'restaurants:order_payment_bypass' order.id %}" class="btn btn-outline-warning btn-lg w-100 rounded-pill fw-bold py-3 hover-lift border-dashed">
+                            <i class="bi bi-bug me-2"></i> Sandbox Bypass (Simulate Payment)
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help / Trust Badges -->
+            <div class="row text-center g-3 mt-2">
+                <div class="col-4">
+                    <div class="text-muted small">
+                        <i class="bi bi-shield-fill-check text-success fs-4 d-block mb-1"></i>
+                        Secure Gateway
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="text-muted small">
+                        <i class="bi bi-lock-fill text-primary fs-4 d-block mb-1"></i>
+                        SSL Encrypted
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="text-muted small">
+                        <i class="bi bi-x-octagon-fill text-danger fs-4 d-block mb-1"></i>
+                        Non-Refundable
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Razorpay Script Integration -->
+{% if razorpay_order_id %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    const options = {
+        "key": "{{ razorpay_key_id }}",
+        "amount": {{ amount_paise }},
+        "currency": "INR",
+        "name": "QuickQueue Restaurants",
+        "description": "Secure Prepaid Food Booking",
+        "image": "https://img.icons8.com/color/96/000000/restaurant.png",
+        "order_id": "{{ razorpay_order_id }}",
+        "handler": function (response) {
+            submitCallbackForm(response.razorpay_payment_id, response.razorpay_order_id, response.razorpay_signature);
+        },
+        "prefill": {
+            "name": "{{ user_name }}",
+            "email": "{{ user_email }}",
+            "contact": "{{ user_phone }}"
+        },
+        "theme": {
+            "color": "#2563eb"
+        }
+    };
+    
+    const rzp = new Razorpay(options);
+    document.getElementById('pay-online-btn').onclick = function (e) {
+        rzp.open();
+        e.preventDefault();
+    };
+
+    function submitCallbackForm(paymentId, orderId, signature) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "restaurants:restaurant_payment_callback" %}';
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        form.appendChild(csrfInput);
+
+        const paymentIdInput = document.createElement('input');
+        paymentIdInput.type = 'hidden';
+        paymentIdInput.name = 'razorpay_payment_id';
+        paymentIdInput.value = paymentId;
+        form.appendChild(paymentIdInput);
+
+        const orderIdInput = document.createElement('input');
+        orderIdInput.type = 'hidden';
+        orderIdInput.name = 'razorpay_order_id';
+        orderIdInput.value = orderId;
+        form.appendChild(orderIdInput);
+
+        const signatureInput = document.createElement('input');
+        signatureInput.type = 'hidden';
+        signatureInput.name = 'razorpay_signature';
+        signatureInput.value = signature;
+        form.appendChild(signatureInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+{% endif %}
+
+<style>
+    .progress-bar-bg {
+        background-color: #e9ecef;
+    }
+    .hover-lift {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .border-dashed {
+        border-style: dashed !important;
+    }
+    .bg-light-hover:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}

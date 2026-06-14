@@ -1,0 +1,251 @@
+<div id="kitchen-orders-content" hx-get="{% url 'restaurants:kitchen_dashboard' branch.id %}" hx-trigger="every 5s" hx-swap="outerHTML">
+<div class="row g-4">
+    <!-- COLUMN 1: PENDING ORDERS -->
+    <div class="col-12 col-xl-4">
+        <div class="dashboard-col h-100 shadow-sm">
+            <h5 class="fw-bold text-warning mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-clock-history me-2"></i>Pending Confirmation</span>
+                <span class="badge bg-warning text-dark">
+                    {{ pending_count }}
+                </span>
+            </h5>
+            
+            {% for order in orders %}
+            {% if order.status == 'pending_confirmation' %}
+            <div class="card order-ticket order-pending shadow-sm mb-3 p-3">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="badge bg-light text-dark fw-bold border">Token #{{ order.token.token_number }}</span>
+                    <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ order.estimated_prep_time_minutes }}m est</small>
+                </div>
+
+                <!-- Customer name -->
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-person-circle text-secondary"></i>
+                    <span class="fw-semibold text-dark small">{{ order.customer_name }}</span>
+                    {% if order.customer_phone %}
+                    <a href="tel:{{ order.customer_phone }}" class="text-muted small ms-auto"><i class="bi bi-telephone me-1"></i>{{ order.customer_phone }}</a>
+                    {% endif %}
+                </div>
+
+                <h6 class="fw-bold text-dark mb-1">{{ order.get_order_type_display }}
+                    {% if order.table %}<span class="text-warning ms-1">• Table {{ order.table.table_number }}</span>{% endif %}
+                </h6>
+                {% if order.order_type == 'delivery' and order.delivery_address %}
+                <div class="mb-2 small text-muted">
+                    <i class="bi bi-geo-alt-fill text-danger me-1"></i><strong>Delivery Address:</strong> {{ order.delivery_address }}
+                </div>
+                {% endif %}
+
+                <!-- Arrival badge -->
+                {% if order.minutes_until_arrival_dynamic %}
+                <div class="mb-2">
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1">
+                        <i class="bi bi-hourglass-split me-1"></i>~{{ order.minutes_until_arrival_dynamic }} min away
+                    </span>
+                </div>
+                {% endif %}
+                
+                <ul class="list-unstyled mb-3 small text-muted">
+                    {% for item in order.items.all %}
+                    <li>{{ item.quantity }} x {{ item.menu_item.name }}</li>
+                    {% endfor %}
+                </ul>
+
+                <!-- Accept Order Form Accordion/Modal Toggle -->
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary btn-sm flex-fill fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#acceptForm-{{ order.id }}">
+                        Accept
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm flex-fill" type="button" data-bs-toggle="collapse" data-bs-target="#rejectForm-{{ order.id }}">
+                        Reject
+                    </button>
+                </div>
+
+                <!-- Accept Collapsible Form -->
+                <div class="collapse mt-3" id="acceptForm-{{ order.id }}">
+                    <form method="POST" action="{% url 'restaurants:accept_order' order.id %}" class="bg-light p-2.5 rounded border">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Prep Time (minutes)</label>
+                            <input type="number" name="prep_time" class="form-control form-control-sm"
+                                   value="{{ order.estimated_prep_time_minutes|default:15 }}" required>
+                        </div>
+                        {% if order.order_type == 'dine_in' %}
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Table Assignment</label>
+                            <select name="table" class="form-select form-select-sm">
+                                {% if order.table %}
+                                <option value="{{ order.table.id }}" selected>Keep current — Table {{ order.table.table_number }} ({{ order.table.capacity }} Pax)</option>
+                                {% else %}
+                                <option value="">-- No Table / Auto --</option>
+                                {% endif %}
+                                {% for table in tables %}
+                                {% if table.id != order.table.id or not order.table %}
+                                <option value="{{ table.id }}"
+                                    {% if table.is_occupied and table.id != order.table.id %}style="color:#aaa;"{% endif %}>
+                                    Table {{ table.table_number }} ({{ table.capacity }} Pax)
+                                    {% if table.is_occupied and table.id != order.table.id %} — Occupied{% endif %}
+                                </option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Select a different table to re-assign. Current table will be released.</div>
+                        </div>
+                        {% endif %}
+                        <button type="submit" class="btn btn-success btn-sm w-100 fw-bold">Confirm &amp; Accept Order</button>
+                    </form>
+                </div>
+
+                <!-- Reject Collapsible Form -->
+                <div class="collapse mt-3" id="rejectForm-{{ order.id }}">
+                    <form method="POST" action="{% url 'restaurants:reject_order' order.id %}" class="bg-light p-2.5 rounded border">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Reason for Rejection</label>
+                            <input type="text" name="rejection_reason" class="form-control form-control-sm" placeholder="e.g. Kitchen overloaded" required>
+                        </div>
+                        <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold">Reject Order</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- COLUMN 2: PREPARING ORDERS -->
+    <div class="col-12 col-md-6 col-xl-4">
+        <div class="dashboard-col h-100 shadow-sm">
+            <h5 class="fw-bold text-primary mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-fire me-2"></i>Preparing</span>
+                <span class="badge bg-primary">
+                    {{ preparing_count }}
+                </span>
+            </h5>
+
+            {% for order in orders %}
+            {% if order.status == 'preparing' %}
+            <div class="card order-ticket order-preparing shadow-sm mb-3 p-3">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="badge bg-light text-dark fw-bold border">Token #{{ order.token.token_number }}</span>
+                    <small class="text-primary fw-bold"><i class="bi bi-clock me-1"></i>{{ order.estimated_prep_time_minutes }}m est</small>
+                </div>
+
+                <!-- Customer name -->
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-person-circle text-secondary"></i>
+                    <span class="fw-semibold text-dark small">{{ order.customer_name }}</span>
+                    {% if order.customer_phone %}
+                    <a href="tel:{{ order.customer_phone }}" class="text-muted small ms-auto"><i class="bi bi-telephone me-1"></i>{{ order.customer_phone }}</a>
+                    {% endif %}
+                </div>
+
+                <h6 class="fw-bold text-dark mb-1">
+                    {{ order.get_order_type_display }}
+                    {% if order.table %}
+                    <span class="text-primary">• Table {{ order.table.table_number }}</span>
+                    {% endif %}
+                </h6>
+                {% if order.order_type == 'delivery' and order.delivery_address %}
+                <div class="mb-2 small text-muted">
+                    <i class="bi bi-geo-alt-fill text-danger me-1"></i><strong>Delivery Address:</strong> {{ order.delivery_address }}
+                </div>
+                {% endif %}
+
+                <!-- Arrival badge -->
+                {% if order.minutes_until_arrival_dynamic %}
+                <div class="mb-2">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                        <i class="bi bi-hourglass-split me-1"></i>~{{ order.minutes_until_arrival_dynamic }} min away
+                    </span>
+                </div>
+                {% endif %}
+
+                <ul class="list-unstyled mb-3 small text-muted">
+                    {% for item in order.items.all %}
+                    <li>{{ item.quantity }} x {{ item.menu_item.name }}</li>
+                    {% endfor %}
+                </ul>
+
+                <a href="{% url 'restaurants:update_order_status' order.id 'ready' %}" class="btn btn-success btn-sm w-100 fw-bold">
+                    <i class="bi bi-check-lg me-1"></i>Mark Ready
+                </a>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- COLUMN 3: READY / SERVED ORDERS & TABLE MANAGEMENT -->
+    <div class="col-12 col-md-6 col-xl-4">
+        <!-- READY / SERVED SUB-COLUMN -->
+        <div class="dashboard-col shadow-sm mb-4">
+            <h5 class="fw-bold text-success mb-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-check-all me-2"></i>Ready / Active</span>
+                <span class="badge bg-success">
+                    {{ ready_count }}
+                </span>
+            </h5>
+
+            {% for order in orders %}
+            {% if order.status == 'ready' %}
+            <div class="card order-ticket order-ready shadow-sm mb-3 p-3">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="badge bg-light text-dark fw-bold border">Token #{{ order.token.token_number }}</span>
+                    <span class="badge bg-success">Ready</span>
+                </div>
+
+                <!-- Customer name -->
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-person-circle text-secondary"></i>
+                    <span class="fw-semibold text-dark small">{{ order.customer_name }}</span>
+                    {% if order.customer_phone %}
+                    <a href="tel:{{ order.customer_phone }}" class="text-muted small ms-auto"><i class="bi bi-telephone me-1"></i>{{ order.customer_phone }}</a>
+                    {% endif %}
+                </div>
+
+                <h6 class="fw-bold text-dark mb-1">
+                    {{ order.get_order_type_display }}
+                    {% if order.table %}
+                    <span class="text-success">• Table {{ order.table.table_number }}</span>
+                    {% endif %}
+                </h6>
+                {% if order.order_type == 'delivery' and order.delivery_address %}
+                <div class="mb-2 small text-muted">
+                    <i class="bi bi-geo-alt-fill text-danger me-1"></i><strong>Delivery Address:</strong> {{ order.delivery_address }}
+                </div>
+                {% endif %}
+
+                <ul class="list-unstyled mb-3 small text-muted">
+                    {% for item in order.items.all %}
+                    <li>{{ item.quantity }} x {{ item.menu_item.name }}</li>
+                    {% endfor %}
+                </ul>
+
+                <div class="d-flex gap-2">
+                    <a href="{% url 'restaurants:update_order_status' order.id 'completed' %}" class="btn btn-outline-success btn-sm flex-fill fw-bold">
+                        Complete
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- TABLE MANAGEMENT SUB-COLUMN -->
+        <div class="dashboard-col shadow-sm" style="min-height: auto;">
+            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-grid-3x3-gap-fill text-muted me-2"></i>Tables Tracker</h5>
+            <div class="table-grid">
+                {% for table in tables %}
+                <a href="{% url 'restaurants:toggle_table_status' table.id %}" class="text-decoration-none">
+                    <div class="table-box {% if table.is_occupied %}table-occupied{% else %}table-vacant{% endif %}">
+                        Table {{ table.table_number }}
+                        <small class="d-block fw-normal opacity-75">{{ table.capacity }} Pax</small>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+</div>

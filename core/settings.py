@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'organization',
     'queues',
     'accounts',
-    
+    'restaurants',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -126,7 +126,7 @@ USE_I18N = True
 
 USE_TZ = False
 
-SESSION_COOKIE_AGE = 3600   # 60 minutes
+SESSION_COOKIE_AGE = 14400   # 4 Hours
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
