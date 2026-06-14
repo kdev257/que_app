@@ -125,6 +125,15 @@
                     <div class="col-md-3 col-lg-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary w-100 py-2.5 fw-bold">Search</button>
                     </div>
+                    
+                    <div class="col-12 text-center mt-3">
+                        <div class="form-check form-switch d-inline-block">
+                            <input class="form-check-input" type="checkbox" role="switch" name="delivery_only" id="deliveryOnlySwitch" {% if delivery_only %}checked{% endif %}>
+                            <label class="form-check-label fw-bold text-dark" for="deliveryOnlySwitch">
+                                <i class="bi bi-truck text-primary me-1"></i> Deliver at Home (Nearby Only)
+                            </label>
+                        </div>
+                    </div>
                 </form>
                 {% endif %}
 
@@ -185,6 +194,11 @@
                 Available Restaurants
             {% endif %}
             <span class="badge bg-secondary-subtle text-dark fs-6 ms-2">{{ branches|length }} Found</span>
+            {% if delivery_only %}
+            <span class="badge bg-primary-subtle text-primary fs-6 ms-2">
+                <i class="bi bi-truck me-1"></i> Delivery to {{ user_pincode }}
+            </span>
+            {% endif %}
         </h4>
 
         <div class="row g-4">
@@ -236,7 +250,11 @@
                 <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white-50">
                     <i class="bi bi-search text-muted display-1 mb-3"></i>
                     <h5 class="fw-bold">No restaurants found</h5>
+                    {% if delivery_only %}
+                    <p class="text-muted mb-0">No nearby restaurants offer home delivery to your PIN code ({{ user_pincode|default:"not set" }}).</p>
+                    {% else %}
                     <p class="text-muted mb-0">Try searching for a different city, milestone, highway, or landmark.</p>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}

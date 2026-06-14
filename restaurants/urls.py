@@ -20,7 +20,6 @@ urlpatterns = [
     # Payments
     path('payment/<int:order_id>/', views.order_payment, name='order_payment'),
     path('payment/callback/', views.restaurant_payment_callback, name='restaurant_payment_callback'),
-    path('payment/bypass/<int:order_id>/', views.order_payment_bypass, name='order_payment_bypass'),
     
     # Kitchen & Table Dashboards
     path('kitchen/dashboard/<int:branch_id>/', views.kitchen_dashboard, name='kitchen_dashboard'),

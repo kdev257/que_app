@@ -299,6 +299,94 @@ class RestaurantSearchTests(TestCase):
         with self.assertRaises(ValidationError):
             hb.save()
 
+    def test_delivery_search_nearby_delivery_only(self):
+        """Verify delivery search strictly returns nearby delivery-capable branches."""
+        from login.models import User, UserProfile
+        user = User.objects.create_user(username="search_user_1", password="password")
+        UserProfile.objects.create(user=user, role='customer', pin_code='131028')
+        
+        # branch_km50 is in 131028
+        self.branch_km50.offers_delivery = True
+        self.branch_km50.save()
+        
+        self.client.login(username="search_user_1", password="password")
+        from django.urls import reverse
+        response = self.client.get(reverse('restaurants:restaurant_search'), {
+            'search_type': 'urban',
+            'delivery_only': 'on'
+        })
+        self.assertEqual(response.status_code, 200)
+        branches = list(response.context['branches'])
+        self.assertEqual(len(branches), 1)
+        self.assertIn(self.branch_km50, branches)
+
+    def test_delivery_search_nearby_delivery_only_no_fallback(self):
+        """Verify delivery search does not fall back to other pincodes if none found."""
+        from login.models import User, UserProfile
+        user = User.objects.create_user(username="search_user_2", password="password")
+        UserProfile.objects.create(user=user, role='customer', pin_code='999999')
+        
+        # Enable delivery on branch_km50
+        self.branch_km50.offers_delivery = True
+        self.branch_km50.save()
+        
+        self.client.login(username="search_user_2", password="password")
+        from django.urls import reverse
+        response = self.client.get(reverse('restaurants:restaurant_search'), {
+            'search_type': 'urban',
+            'delivery_only': 'on'
+        })
+        self.assertEqual(response.status_code, 200)
+        branches = list(response.context['branches'])
+        self.assertEqual(len(branches), 0)
+
+    def test_delivery_search_nearby_excludes_non_delivery_in_pincode(self):
+        """Verify that branches in the same pincode are excluded if they don't offer delivery."""
+        from login.models import User, UserProfile
+        user = User.objects.create_user(username="search_user_3", password="password")
+        UserProfile.objects.create(user=user, role='customer', pin_code='131028')
+        
+        # branch_km50 is in 131028 but offers_delivery = False
+        self.branch_km50.offers_delivery = False
+        self.branch_km50.save()
+        
+        self.client.login(username="search_user_3", password="password")
+        from django.urls import reverse
+        response = self.client.get(reverse('restaurants:restaurant_search'), {
+            'search_type': 'urban',
+            'delivery_only': 'on'
+        })
+        self.assertEqual(response.status_code, 200)
+        branches = list(response.context['branches'])
+        self.assertEqual(len(branches), 0)
+
+    def test_delivery_search_guest_user(self):
+        """Verify delivery search works correctly for guest users via session pincode."""
+        from login.models import Guest
+        guest = Guest.objects.create(
+            name="Test Guest",
+            email="testguest@gmail.com",
+            phone_no="9876543210",
+            pin_code="131028"
+        )
+        # Enable delivery on branch_km50
+        self.branch_km50.offers_delivery = True
+        self.branch_km50.save()
+        
+        session = self.client.session
+        session['guest_id'] = guest.id
+        session.save()
+        
+        from django.urls import reverse
+        response = self.client.get(reverse('restaurants:restaurant_search'), {
+            'search_type': 'urban',
+            'delivery_only': 'on'
+        })
+        self.assertEqual(response.status_code, 200)
+        branches = list(response.context['branches'])
+        self.assertEqual(len(branches), 1)
+        self.assertIn(self.branch_km50, branches)
+
 
 class RestaurantOrderTests(TestCase):
     def setUp(self):
@@ -507,41 +595,6 @@ class RestaurantOrderTests(TestCase):
         # Should now be tentative (awaiting payment)
         self.assertEqual(order.status, 'tentative')
         self.assertEqual(order.estimated_prep_time_minutes, 20)
-
-    def test_payment_bypass_workflow(self):
-        self.client.login(username="cust_order_test", password="testpass")
-        
-        # Create tentative order
-        from django.utils import timezone
-        from queues.models import Token
-        from restaurants.models import RestaurantOrder
-        token = Token.objects.create(
-            branch=self.branch,
-            token_date=timezone.now().date(),
-            status="waiting",
-            user=self.user,
-            payment_status='unpaid'
-        )
-        order = RestaurantOrder.objects.create(
-            token=token,
-            branch=self.branch,
-            table=self.table1,
-            order_type='dine_in',
-            status='tentative'
-        )
-        
-        # Request the sandbox payment bypass URL
-        from django.urls import reverse
-        response = self.client.get(reverse('restaurants:order_payment_bypass', args=[order.id]))
-        
-        self.assertEqual(response.status_code, 302)
-        
-        # Verify order is preparing and token is paid
-        order.refresh_from_db()
-        token.refresh_from_db()
-        
-        self.assertEqual(order.status, 'preparing')
-        self.assertEqual(token.payment_status, 'paid')
 
     def test_reject_order_releases_table(self):
         """Verify that rejecting an order releases the previously allocated table."""

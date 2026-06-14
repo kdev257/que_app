@@ -131,6 +131,14 @@ def restaurant_search(request):
         criteria = request.GET.get('criteria', '')
         selected_val = request.GET.get('selected_val', '').strip()
         search_query = request.GET.get('q', '').strip()
+        delivery_only = request.GET.get('delivery_only') == 'on'
+        
+        if delivery_only:
+            branches_qs = branches_qs.filter(offers_delivery=True)
+            if user_pincode:
+                branches_qs = branches_qs.filter(pin_code=user_pincode)
+            else:
+                branches_qs = branches_qs.none()
         
         if selected_val:
             if criteria == 'city':
@@ -150,11 +158,16 @@ def restaurant_search(request):
                 Q(landmarks__name__icontains=search_query)
             ).distinct()
         elif user_pincode:
-            branches = branches_qs.filter(pin_code=user_pincode)
-            if not branches.exists():
+            if delivery_only:
                 branches = branches_qs
+            else:
+                branches = branches_qs.filter(pin_code=user_pincode)
+                if not branches.exists():
+                    branches = branches_qs
         else:
             branches = branches_qs
+
+    delivery_only = request.GET.get('delivery_only') == 'on'
 
     context = {
         'search_type': search_type,
@@ -166,6 +179,7 @@ def restaurant_search(request):
         'cities': cities,
         'pin_codes': pin_codes,
         'landmarks': landmarks,
+        'delivery_only': delivery_only,
     }
     return render(request, 'restaurants/restaurant_search.html', context)
 
@@ -632,56 +646,7 @@ def restaurant_payment_callback(request):
     return redirect('restaurants:restaurant_search')
 
 
-@customer_required
-@login_or_guest_required
-def order_payment_bypass(request, order_id):
-    order = get_object_or_404(RestaurantOrder, id=order_id)
-    
-    # Check authorization
-    if request.user.is_authenticated:
-        if order.token.user != request.user:
-            messages.error(request, "Unauthorized view.")
-            return redirect('restaurants:restaurant_search')
-    else:
-        guest = get_guest(request)
-        if not guest or order.token.guest != guest:
-            messages.error(request, "Unauthorized view.")
-            return redirect('restaurants:restaurant_search')
-            
-    if order.status != 'tentative':
-        messages.info(request, "This order is not awaiting payment.")
-        return redirect('restaurants:order_status', order_id=order.id)
-        
-    token = order.token
-    subtotal = sum(item.price * item.quantity for item in order.items.all())
-    
-    from accounts.models import PlatformFee
-    active_fee_obj = PlatformFee.objects.filter(is_active=True).first()
-    booking_fee = Decimal('0.00')
-    if active_fee_obj and active_fee_obj.is_currently_active():
-        if request.user.is_authenticated:
-            booking_fee = active_fee_obj.fee_logged_in
-        else:
-            booking_fee = active_fee_obj.fee_guest
-            
-    final_price = subtotal + booking_fee
-    
-    from django.db import transaction as db_transaction
-    with db_transaction.atomic():
-        token.payment_status = 'paid'
-        token.status = 'serving'
-        token.final_price = final_price
-        token.booking_fee = booking_fee
-        token.save()
-        
-        order.status = 'preparing'
-        order.save()
 
-    # Notify customer of payment success
-    send_payment_confirmed_email(order)
-        
-    messages.success(request, "[Sandbox Bypass] Payment marked as PAID. Kitchen is preparing your order.")
-    return redirect('restaurants:order_status', order_id=order.id)
 
 
 # ---------------------------------------------------------------------------
