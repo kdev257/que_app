@@ -812,6 +812,59 @@ class RestaurantOrderTests(TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(str(messages[0]), f"Added {self.item.name} to cart.")
 
+    def test_subtract_from_cart_reduces_quantity(self):
+        self.client.login(username="cust_order_test", password="testpass")
+        from django.urls import reverse
+        
+        # Add 3 items
+        self.client.post(reverse('restaurants:add_to_order_cart'), {
+            'menu_item_id': self.item.id,
+            'quantity': '3',
+            'branch_id': self.branch.id,
+        })
+        
+        # Subtract 1 item
+        response = self.client.post(reverse('restaurants:add_to_order_cart'), {
+            'menu_item_id': self.item.id,
+            'quantity': '-1',
+            'branch_id': self.branch.id,
+        }, follow=True)
+        
+        self.assertEqual(response.status_code, 200)
+        messages = list(response.context['messages'])
+        self.assertEqual(str(messages[-1]), f"Reduced quantity of {self.item.name}.")
+        
+        # Verify cart quantity
+        cart = self.client.session.get('restaurant_cart', {})
+        self.assertEqual(cart.get(str(self.item.id)), 2)
+
+    def test_subtract_from_cart_removes_item(self):
+        self.client.login(username="cust_order_test", password="testpass")
+        from django.urls import reverse
+        
+        # Add 1 item
+        self.client.post(reverse('restaurants:add_to_order_cart'), {
+            'menu_item_id': self.item.id,
+            'quantity': '1',
+            'branch_id': self.branch.id,
+        })
+        
+        # Subtract 1 item (should remove it)
+        response = self.client.post(reverse('restaurants:add_to_order_cart'), {
+            'menu_item_id': self.item.id,
+            'quantity': '-1',
+            'branch_id': self.branch.id,
+        }, follow=True)
+        
+        self.assertEqual(response.status_code, 200)
+        messages = list(response.context['messages'])
+        self.assertEqual(str(messages[-1]), f"Removed {self.item.name} from cart.")
+        
+        # Verify cart is empty and branch_id is popped
+        cart = self.client.session.get('restaurant_cart', {})
+        self.assertNotIn(str(self.item.id), cart)
+        self.assertIsNone(self.client.session.get('restaurant_cart_branch_id'))
+
     def test_toggle_delivery_status_success_as_branch_admin(self):
         from login.models import User, UserProfile
         from django.urls import reverse

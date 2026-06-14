@@ -100,19 +100,45 @@
                                 </div>
                             </div>
                             
-                            <!-- Add to cart form -->
+                            <!-- Add/Subtract Quantity Controls -->
                             {% if item.is_available %}
-                            <form method="POST" action="{% url 'restaurants:add_to_order_cart' %}" class="d-flex align-items-center">
-                                {% csrf_token %}
-                                <input type="hidden" name="menu_item_id" value="{{ item.id }}">
-                                <input type="hidden" name="branch_id" value="{{ branch.id }}">
-                                <div class="input-group input-group-sm me-2" style="width: 100px;">
-                                    <input type="number" name="quantity" class="form-control text-center py-2" value="1" min="1" max="10">
+                                {% if item.cart_quantity > 0 %}
+                                <div class="d-flex align-items-center bg-light border rounded-3 p-1">
+                                    <!-- Minus Form -->
+                                    <form method="POST" action="{% url 'restaurants:add_to_order_cart' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="menu_item_id" value="{{ item.id }}">
+                                        <input type="hidden" name="branch_id" value="{{ branch.id }}">
+                                        <input type="hidden" name="quantity" value="-1">
+                                        <button type="submit" class="btn btn-sm btn-link text-danger px-2.5 py-1" style="font-size: 1.1rem; text-decoration: none;">
+                                            <i class="bi bi-dash-lg"></i>
+                                        </button>
+                                    </form>
+                                    
+                                    <span class="px-2 fw-bold text-dark" style="min-width: 20px; text-align: center;">{{ item.cart_quantity }}</span>
+                                    
+                                    <!-- Plus Form -->
+                                    <form method="POST" action="{% url 'restaurants:add_to_order_cart' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="menu_item_id" value="{{ item.id }}">
+                                        <input type="hidden" name="branch_id" value="{{ branch.id }}">
+                                        <input type="hidden" name="quantity" value="1">
+                                        <button type="submit" class="btn btn-sm btn-link text-primary px-2.5 py-1" style="font-size: 1.1rem; text-decoration: none;">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </form>
                                 </div>
-                                <button type="submit" class="btn btn-outline-primary btn-sm px-3 fw-bold py-2">
-                                    <i class="bi bi-plus-lg me-1"></i>Add
-                                </button>
-                            </form>
+                                {% else %}
+                                <form method="POST" action="{% url 'restaurants:add_to_order_cart' %}" class="d-flex align-items-center">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="menu_item_id" value="{{ item.id }}">
+                                    <input type="hidden" name="branch_id" value="{{ branch.id }}">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="btn btn-outline-primary btn-sm px-3 fw-bold py-2 rounded-3">
+                                        <i class="bi bi-plus-lg me-1"></i>Add
+                                    </button>
+                                </form>
+                                {% endif %}
                             {% else %}
                             <span class="badge bg-danger-subtle text-danger px-3 py-2 fw-semibold">Sold Out</span>
                             {% endif %}

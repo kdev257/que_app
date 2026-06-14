@@ -197,6 +197,11 @@ def menu_view(request, branch_id):
     cart = request.session.get('restaurant_cart', {})
     cart_count = sum(cart.values())
     
+    # Attach cart quantity to each menu item
+    for category in categories:
+        for item in category.menu_items.all():
+            item.cart_quantity = cart.get(str(item.id), 0)
+            
     context = {
         'branch': branch,
         'categories': categories,
@@ -228,12 +233,25 @@ def add_to_order_cart(request):
         if cart_branch_id and str(cart_branch_id) != str(branch_id):
             cart = {}
             
-        cart[str(menu_item_id)] = cart.get(str(menu_item_id), 0) + quantity
+        current_qty = cart.get(str(menu_item_id), 0)
+        new_qty = current_qty + quantity
+        
+        if new_qty <= 0:
+            cart.pop(str(menu_item_id), None)
+            messages.success(request, f"Removed {menu_item.name} from cart.")
+        else:
+            cart[str(menu_item_id)] = new_qty
+            if quantity < 0:
+                messages.success(request, f"Reduced quantity of {menu_item.name}.")
+            else:
+                messages.success(request, f"Added {menu_item.name} to cart.")
         
         request.session['restaurant_cart'] = cart
-        request.session['restaurant_cart_branch_id'] = branch_id
-        
-        messages.success(request, f"Added {menu_item.name} to cart.")
+        if cart:
+            request.session['restaurant_cart_branch_id'] = branch_id
+        else:
+            request.session.pop('restaurant_cart_branch_id', None)
+            
         return redirect('restaurants:menu_view', branch_id=branch_id)
         
     return redirect('restaurants:restaurant_search')
