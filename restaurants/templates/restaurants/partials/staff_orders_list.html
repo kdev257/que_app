@@ -13,7 +13,7 @@
             
             {% for order in awaiting_arrival %}
             <div class="card staff-card shadow-sm mb-3 p-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2">
                     <span class="badge bg-light text-dark fw-bold border">Token #{{ order.token.token_number }}</span>
                     <small class="text-muted">
                         {% if order.order_type == 'dine_in' %}
@@ -80,14 +80,14 @@
             
             {% for order in awaiting_service %}
             <div class="card staff-card shadow-sm mb-3 p-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2">
                     <span class="badge bg-light text-dark fw-bold border">Token #{{ order.token.token_number }}</span>
                     {% if order.status == 'ready' %}
-                    <span class="badge bg-success status-badge-ready text-white px-2.5 py-1">
+                    <span class="badge bg-success status-badge-ready text-white px-2 py-1">
                         <span class="spinner-grow spinner-grow-sm me-1" role="status"></span>Ready to Serve
                     </span>
                     {% else %}
-                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2.5 py-1">
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1">
                         Preparing ({{ order.estimated_prep_time_minutes }}m)
                     </span>
                     {% endif %}
@@ -153,7 +153,7 @@
             
             {% for order in dining %}
             <div class="card staff-card shadow-sm mb-3 p-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2">
                     <span class="badge bg-light text-dark fw-bold border">Token #{{ order.token.token_number }}</span>
                     <span class="badge bg-info text-white px-2 py-1">Eating</span>
                 </div>

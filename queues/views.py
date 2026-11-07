@@ -26,6 +26,8 @@ from datetime import datetime, timedelta
 from accounts.models import Promotion
 import datetime
 from django.utils import timezone
+from organization.permissions import can_manage_branch, deny
+from billing.services import create_invoice_for_token, send_invoice_email
 # ---------------------------------------------------------------------------
 # Helper: resolve the active guest from session (unauthenticated users only)
 # ---------------------------------------------------------------------------
@@ -49,8 +51,10 @@ def login_or_guest_required(view_func):
             return view_func(request, *args, **kwargs)
         if get_guest(request):
             return view_func(request, *args, **kwargs)
-        messages.error(request, "Please log in or continue as a guest to access this page.")
-        return redirect('user_login')
+        # Ask the visitor to log in or continue as guest, then come back here
+        from django.urls import reverse
+        from urllib.parse import urlencode
+        return redirect(f"{reverse('login_choice')}?{urlencode({'next': request.get_full_path()})}")
     return _wrapped
 
 
@@ -298,6 +302,23 @@ from django.conf import settings
 # Ensure these are imported correctly in your models/views
 # from .models import Cart, CartItem, Token, TokenService
 from django.utils.dateparse import parse_date
+def _send_after_commit(subject, message, email):
+    """
+    Send an email only after the booking is saved, and never let an email
+    problem (e.g. SMTP disconnect) break or roll back the booking.
+    """
+    import logging
+
+    def _send():
+        try:
+            send_mail(subject=subject, message=message, from_email=settings.EMAIL_HOST_USER or settings.DEFAULT_FROM_EMAIL,
+                      recipient_list=[email], fail_silently=False)
+        except Exception:
+            logging.getLogger(__name__).exception("Booking email to %s failed", email)
+
+    db_transaction.on_commit(_send)
+
+
 def _execute_token_creation(request, cart, booking_date, commute_time, payment_status='unpaid', razorpay_order_id=None, razorpay_payment_id=None):
     branch = cart.branch
     cart_items = CartItem.objects.filter(cart=cart).select_related("service")
@@ -451,13 +472,7 @@ def _execute_token_creation(request, cart, booking_date, commute_time, payment_s
     -------------------------------------------
     Thank you for using QuickQueue!
     """
-        send_mail(
-            subject="Token Confirmation - QuickQueue",
-            message=email_message,
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[token.user.email],
-            fail_silently=False,
-        )
+        _send_after_commit("Token Confirmation - QuickQueue", email_message, token.user.email)
     elif token.guest and token.guest.email:
         guest_obj = token.guest
         email_message = f"""
@@ -472,13 +487,7 @@ def _execute_token_creation(request, cart, booking_date, commute_time, payment_s
     -------------------------------------------
     Thank you for using QuickQueue!
     """
-        send_mail(
-            subject="Token Confirmation - QuickQueue",
-            message=email_message,
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[guest_obj.email],
-            fail_silently=True,
-        )
+        _send_after_commit("Token Confirmation - QuickQueue", email_message, guest_obj.email)
 
     return token
 
@@ -627,14 +636,32 @@ def token_detail(request, token_id):
     }
     return render(request, "queues/token_detail.html", context)
 
+def _is_token_owner(request, token):
+    """True if the current user (or session guest) owns this token."""
+    if request.user.is_authenticated:
+        return token.user_id is not None and token.user_id == request.user.id
+    guest = get_guest(request)
+    return guest is not None and token.guest_id == guest.id
+
+
 @login_or_guest_required
 def delete_token(request, token_id):
     token = get_object_or_404(Token, id=token_id)
+    is_staff = can_manage_branch(request.user, token.branch_id)
+    if not (is_staff or _is_token_owner(request, token)):
+        messages.error(request, "You are not authorized to delete this token.")
+        return redirect("customer_dashboard")
+    if token.status not in ("waiting", "cancelled"):
+        messages.error(request, "Only waiting or cancelled tokens can be deleted.")
+        return redirect("shop_dashboard", id=token.branch_id) if is_staff else redirect("customer_home")
+
     branch = token.branch
     date = token.token_date
     token.delete()
     recalculate_queue_times(branch, date)
     messages.success(request, "Token deleted successfully.")
+    if is_staff:
+        return redirect("shop_dashboard", id=branch.id)
     return redirect("customer_dashboard")
 
 
@@ -649,6 +676,9 @@ def cancel_token(request, token_id):
             id=token_id,
             status="waiting"
         )
+        if not _is_token_owner(request, token):
+            messages.error(request, "You are not authorized to cancel this token.")
+            return redirect("customer_dashboard")
 
         branch = token.branch
         date = token.token_date
@@ -668,91 +698,51 @@ def cancel_token(request, token_id):
     # 🔁 Redirect back to dashboard (adjust URL name if needed)
     return redirect("customer_home")
 
-@transaction.atomic
 @login_required
 def handle_no_show(request, token_id):
-    try:
-        # 1. Get token (only waiting or serving can be marked no-show)
-        token = Token.objects.select_for_update().get(
-            id=token_id,
-            status__in=["waiting"]
-        )
+    token = get_object_or_404(Token, id=token_id)
+    if not can_manage_branch(request.user, token.branch_id):
+        return deny(request)
 
-        branch = token.branch
+    branch = token.branch
+    if token.status != "waiting":
+        messages.error(request, "Only waiting tokens can be marked as no-show.")
+        return redirect("shop_dashboard", id=branch.id)
 
-        # 2. Mark as no-show
+    with transaction.atomic():
         token.status = "no_show"
         token.end_time = timezone.now()
-        token.save()
+        token.save(update_fields=["status", "end_time"])
+        # Re-plan the queue and store the new times in the database
+        recalculate_queue_times(branch, token.token_date)
 
-        # 3. Get remaining waiting tokens
-        waiting_tokens = list(
-            Token.objects.select_for_update()
-            .filter(branch=branch, status="waiting")
-            .order_by("expected_start_time")
-        )
-
-        # 4. Determine starting point
-        # If someone else is serving → continue from their end
-        serving_token = Token.objects.filter(
-            branch=branch,
-            status="in_progress"
-        ).exclude(id=token.id).order_by("start_time").first()
-
-        if serving_token:
-            prev_end_time = serving_token.expected_end_time
-        else:
-            # 👇 KEY DIFFERENCE: immediate start after no-show
-            prev_end_time = timezone.now()
-
-        updated_tokens = []
-
-        # 5. Recalculate queue
-        for t in waiting_tokens:
-            t.expected_start_time = prev_end_time
-            t.expected_end_time = prev_end_time + timedelta(
-                minutes=t.expected_service_time
-            )
-
-            t.expected_waiting_time = max(
-                0,
-                int((t.expected_start_time - timezone.now()).total_seconds() / 60)
-            )
-
-            prev_end_time = t.expected_end_time
-            updated_tokens.append(t)
-
-        # 6. Bulk update
-        Token.objects.bulk_update(
-            updated_tokens,
-            ["expected_start_time", "expected_end_time", "expected_waiting_time"]
-        )
-
-        messages.success(request, "Token marked as no-show and queue updated")
-    except Token.DoesNotExist:
-        messages.error(request, "Only waiting  can be marked as no-show")
-        # send notification to impacted customers about reduced waiting time due to no-show
-                   
-        message = f"""
-                Hi {t.user.first_name},
-                We wanted to inform you that there has been a change in the queue at {t.branch.name} which may affect your expected waiting time. A customer with token number {t.token_number} did not show up for their appointment, which has resulted in a shorter wait time for you. Here are your updated details:
-                -------------------------------------------------------------------------------------------
-                Token Number: {t.token_number}
-                Updated Expected Waiting Time: {t.expected_waiting_time:.0f} minutes
-                Updated Expected Start Time: {t.expected_start_time}
-                Updated Expected End Time: {t.expected_end_time}
-                We apologize for any inconvenience and thank you for your understanding. Please feel free to reach out if you have any questions or need further assistance.
-                Thank you!
-                """
+    # Tell the waiting customers that their wait time has changed
+    waiting_tokens = Token.objects.filter(
+        branch=branch, status="waiting", token_date=token.token_date
+    ).select_related("user", "guest")
+    for t in waiting_tokens:
+        email = t.user.email if t.user else (t.guest.email if t.guest else None)
+        if not email:
+            continue
+        name = (t.user.first_name or t.user.username) if t.user else t.guest.name
+        start = t.expected_start_time.strftime('%I:%M %p') if t.expected_start_time else '-'
         send_mail(
-                subject="Queue Update Notification",
-                message=message,
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=[t.user.email],
-                fail_silently=True, )
-    messages.success(request, f"Token {token.token_number} marked as no-show and impacted customers notified.")        
-            
-    return redirect("shop_dashboard",branch.id)
+            subject="Queue Update Notification",
+            message=(
+                f"Hi {name},\n\n"
+                f"The queue at {branch.name} has moved faster.\n"
+                f"Token Number: {t.token_number}\n"
+                f"Updated Expected Waiting Time: {t.expected_waiting_time or 0} minutes\n"
+                f"Updated Expected Start Time: {start}\n\n"
+                f"Thank you for using QuickQueue!"
+            ),
+            from_email=settings.EMAIL_HOST_USER or settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=True,
+        )
+
+    messages.success(request, f"Token {token.token_number} marked as no-show and waiting customers notified.")
+    return redirect("shop_dashboard", id=branch.id)
          
 @never_cache
 @customer_required
@@ -784,13 +774,20 @@ def customer_home(request):
         return render(request, "queues/partials/customer_tokens_list.html", context)
     return render(request, "queues/customer_home.html", context)
 
+def _set_branch_open(branch):
+    if not branch.is_open:
+        branch.is_open = True
+        branch.save(update_fields=["is_open"])
+
+
 @login_required
-def open_branch(request, id):
-    branch = get_object_or_404(Branch, id=id)
-    branch.is_open = True
-    branch.save()
+def open_branch(request, branch_id):
+    branch = get_object_or_404(Branch, id=branch_id)
+    if not can_manage_branch(request.user, branch.id):
+        return deny(request)
+    _set_branch_open(branch)
     messages.success(request, f"{branch.name} is now open.")
-    return redirect("shop_dashboard", id=id)
+    return redirect("shop_dashboard", id=branch.id)
 
 
 @never_cache
@@ -820,8 +817,8 @@ def shop_dashboard(request, id):
             messages.error(request, "Access denied. User profile not found.")
             return redirect("customer_home")
             
-    if branch_to_use.is_open == False:
-        open_branch(request, branch_to_use.id)
+    if not branch_to_use.is_open:
+        _set_branch_open(branch_to_use)
             
     # Recalculate queue times dynamically on page load
     recalculate_queue_times(branch_to_use, datetime.date.today())
@@ -871,6 +868,8 @@ def shop_dashboard(request, id):
 def start_service(request, token_id):
     token = get_object_or_404(Token, id=token_id)
     branch_id = token.branch.id
+    if not can_manage_branch(request.user, branch_id):
+        return deny(request)
     if token.branch.number_of_employees <= Token.objects.filter(branch=token.branch, status="in_progress", token_date=datetime.date.today()).count():
         messages.error(request, "No staff available to start this service.")
         return redirect("shop_dashboard", id=branch_id)
@@ -891,27 +890,37 @@ def start_service(request, token_id):
 
 @login_required
 def end_service(request, token_id):
+    """Shown as the 'Generate Invoice' button: completes the service and creates the invoice."""
     token = get_object_or_404(Token, id=token_id)
     branch_id = token.branch.id
+    if not can_manage_branch(request.user, branch_id):
+        return deny(request)
 
     if token.status != "in_progress":
         messages.error(request, "Service not in progress.")
         return redirect("shop_dashboard", id=branch_id)
 
-    token.status = "completed"
-    token.end_time = timezone.now()
-    token.actual_service_time = (token.end_time - token.start_time).total_seconds() / 60
-    token.waiting_time = (token.start_time - token.created_at).total_seconds() / 60
+    with transaction.atomic():
+        token.status = "completed"
+        token.end_time = timezone.now()
+        if token.start_time:
+            token.actual_service_time = round((token.end_time - token.start_time).total_seconds() / 60)
+            if token.created_at:
+                token.waiting_time = max(0, round((token.start_time - token.created_at).total_seconds() / 60))
+        token.save()
+        invoice = create_invoice_for_token(token, created_by=request.user)
 
-    token.save()
     recalculate_queue_times(token.branch, token.token_date)
+    send_invoice_email(invoice)
 
-    messages.success(request, f"Completed Token {token.token_number}")
-    return redirect("shop_dashboard" ,id=branch_id)
+    messages.success(request, f"Completed Token {token.token_number}. Invoice {invoice.invoice_number} generated.")
+    return redirect("billing:invoice_detail", invoice_id=invoice.id)
 
 @login_required
 def close_branch(request, branch_id):
     branch = get_object_or_404(Branch, id=branch_id)
+    if not can_manage_branch(request.user, branch.id):
+        return deny(request)
     branch.is_open = False
     branch.save()
     messages.success(request, f"{branch.name} is now closed.")    

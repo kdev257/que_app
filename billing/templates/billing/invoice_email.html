@@ -1,0 +1,42 @@
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #222;">
+  <h2 style="margin-bottom: 4px;">{{ invoice.seller_name }}</h2>
+  {% if invoice.seller_address %}<div style="color:#666; font-size: 13px;">{{ invoice.seller_address }}</div>{% endif %}
+  {% if invoice.is_gst_invoice %}<div style="font-size: 13px;"><b>GSTIN:</b> {{ invoice.gstin }}</div>{% endif %}
+  <hr>
+  <p>Hi {{ invoice.customer_name }}, thank you for your visit. Here is your {% if invoice.is_gst_invoice %}tax {% endif %}invoice.</p>
+  <p style="font-size: 14px;">
+    <b>Invoice No:</b> {{ invoice.invoice_number }}<br>
+    <b>Date:</b> {{ invoice.created_at|date:"d M Y, h:i A" }}<br>
+    <b>Token:</b> #{{ invoice.token_number }}
+  </p>
+  <table style="width:100%; border-collapse: collapse; font-size: 14px;">
+    <tr style="background:#f2f2f2;">
+      <th style="text-align:left; padding:6px; border:1px solid #ddd;">Item</th>
+      <th style="text-align:right; padding:6px; border:1px solid #ddd;">Qty</th>
+      <th style="text-align:right; padding:6px; border:1px solid #ddd;">Rate (₹)</th>
+      <th style="text-align:right; padding:6px; border:1px solid #ddd;">Amount (₹)</th>
+    </tr>
+    {% for item in items %}
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;">{{ item.description }}</td>
+      <td style="text-align:right; padding:6px; border:1px solid #ddd;">{{ item.quantity }}</td>
+      <td style="text-align:right; padding:6px; border:1px solid #ddd;">{{ item.unit_price }}</td>
+      <td style="text-align:right; padding:6px; border:1px solid #ddd;">{{ item.amount }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <table style="width:100%; font-size: 14px; margin-top: 10px;">
+    <tr><td>Subtotal</td><td style="text-align:right;">₹{{ invoice.subtotal }}</td></tr>
+    {% if invoice.discount_amount > 0 %}<tr><td>Discount</td><td style="text-align:right;">- ₹{{ invoice.discount_amount }}</td></tr>{% endif %}
+    {% if invoice.is_gst_invoice %}
+    <tr><td>Taxable Value</td><td style="text-align:right;">₹{{ invoice.taxable_amount }}</td></tr>
+    <tr><td>CGST</td><td style="text-align:right;">₹{{ invoice.cgst_amount }}</td></tr>
+    <tr><td>SGST</td><td style="text-align:right;">₹{{ invoice.sgst_amount }}</td></tr>
+    {% endif %}
+    {% if invoice.booking_fee > 0 %}<tr><td>Booking Fee</td><td style="text-align:right;">₹{{ invoice.booking_fee }}</td></tr>{% endif %}
+    {% if invoice.booking_fee_gst_amount > 0 %}<tr><td>GST on Booking Fee @ {{ invoice.booking_fee_gst_percentage }}%</td><td style="text-align:right;">₹{{ invoice.booking_fee_gst_amount }}</td></tr>{% endif %}
+    <tr style="font-weight:bold; font-size:16px;"><td>Total</td><td style="text-align:right;">₹{{ invoice.total_amount }}</td></tr>
+    <tr><td>Payment</td><td style="text-align:right;">{{ invoice.payment_status_display }}</td></tr>
+  </table>
+  <p style="color:#888; font-size: 12px; margin-top: 24px;">Thank you for using QuickQueue!</p>
+</div>

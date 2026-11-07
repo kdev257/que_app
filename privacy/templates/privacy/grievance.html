@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Privacy complaint - QuickQueue{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 mx-auto" style="max-width: 640px;">
+  <h3 class="fw-bold mb-1">Privacy complaint</h3>
+  <p class="text-muted small mb-4">Have an account? <a href="{% url 'user_login' %}?next={% url 'privacy:my_data' %}">Log in</a> to use the My Data page instead.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-primary rounded-pill px-4">Submit</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Privacy Notice - QuickQueue{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 mx-auto" style="max-width: 860px;">
+  {% if notice %}
+    <h2 class="fw-bold mb-1">{{ notice.title }}</h2>
+    <p class="text-muted small mb-4">Version {{ notice.version }} &middot; Effective from {{ notice.effective_from|date:"d M Y" }}</p>
+    {% include "privacy/_notice_body.html" %}
+  {% else %}
+    <p>The privacy notice is being updated. Please check back soon.</p>
+  {% endif %}
+  <hr class="my-4">
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'privacy:my_data' %}" class="btn btn-primary rounded-pill">My Data &amp; Rights</a>
+    <a href="{% url 'privacy:grievance' %}" class="btn btn-outline-secondary rounded-pill">Raise a complaint</a>
+  </div>
+</div>
+{% endblock %}

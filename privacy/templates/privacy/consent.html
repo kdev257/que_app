@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Your consent - QuickQueue{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 mx-auto" style="max-width: 860px;">
+  <h2 class="fw-bold mb-1">Please review our Privacy Notice</h2>
+  <p class="text-muted mb-4">We need your consent before you continue.{% if notice %} (Version {{ notice.version }}){% endif %}</p>
+  <div class="border rounded-3 p-3 mb-4 bg-light" style="max-height: 340px; overflow-y: auto;">
+    {% include "privacy/_notice_body.html" %}
+  </div>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {{ form|crispy }}
+    <div class="d-flex flex-wrap gap-2 mt-3">
+      <button type="submit" class="btn btn-primary rounded-pill px-4">I agree, continue</button>
+      <a href="{% url 'logout_view' %}" class="btn btn-outline-secondary rounded-pill px-4">I do not agree (log out)</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

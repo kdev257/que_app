@@ -1,0 +1,11 @@
+{% for b in blocks %}
+  {% if b.type == "h" %}<h5 class="fw-bold mt-4">{{ b.text }}</h5>
+  {% elif b.type == "p" %}<p>{{ b.text }}</p>
+  {% else %}<ul>{% for item in b.items %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+{% endfor %}
+<h5 class="fw-bold mt-4">Contact for privacy questions and complaints</h5>
+<p class="mb-0">
+  {{ DPO_NAME|default:"Data Protection Officer" }}
+  {% if DPO_EMAIL %}&middot; <a href="mailto:{{ DPO_EMAIL }}">{{ DPO_EMAIL }}</a>{% endif %}
+  {% if DPO_PHONE %}&middot; {{ DPO_PHONE }}{% endif %}
+</p>

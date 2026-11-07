@@ -26,6 +26,8 @@ from login.views import user_profile
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('sw.js', views.service_worker, name='service_worker'),
+    path('offline/', views.offline, name='offline'),
     path('accounts/profile/', user_profile, name='user_profile'),        
     path('admin/', admin.site.urls),
     path('que/', include('queues.urls')),
@@ -33,6 +35,8 @@ urlpatterns = [
     path('org/', include('organization.urls')),
     path('acc/', include('accounts.urls')),
     path('restaurant/', include('restaurants.urls')),
+    path('billing/', include('billing.urls')),
+    path('privacy/', include('privacy.urls')),
     path('log/logout/', auth_views.LogoutView.as_view(next_page='/log/login/'), name='logout'),
     path('registration/', include('django.contrib.auth.urls')),
     

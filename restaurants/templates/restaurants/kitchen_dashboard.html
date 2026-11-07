@@ -52,17 +52,23 @@
         color: #842029;
         border: 1px solid #f5c2c7;
     }
+    /* Phones: no tall empty columns */
+    @media (max-width: 767.98px) {
+        .dashboard-col { min-height: 0; }
+        /* 16px inputs stop iPhones from zooming in when typing */
+        .dashboard-col input, .dashboard-col select { font-size: 16px; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center">
+    <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div>
             <h2 class="fw-bold mb-0 text-dark"><i class="bi bi-fire text-danger me-2"></i>Kitchen Dashboard</h2>
             <p class="text-muted mb-0">{{ branch.name }} • Manage incoming and active orders</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
             {% if not branch.highway_info %}
             <form method="POST" action="{% url 'restaurants:toggle_delivery_status' branch.id %}" class="d-inline">
                 {% csrf_token %}
@@ -79,6 +85,12 @@
             {% endif %}
             <a href="{% url 'shop_dashboard' branch.id %}" class="btn btn-outline-secondary fw-semibold">
                 <i class="bi bi-speedometer2 me-1"></i>Queue Dashboard
+            </a>
+            <a href="{% url 'billing:branch_invoices' branch.id %}" class="btn btn-outline-dark fw-semibold">
+                <i class="bi bi-receipt me-1"></i>Invoices
+            </a>
+            <a href="{% url 'branch_gst_settings' branch.id %}" class="btn btn-outline-dark fw-semibold">
+                <i class="bi bi-percent me-1"></i>GST Settings
             </a>
             <span class="badge bg-success-subtle text-success border px-3 py-2 fs-6 rounded-pill d-flex align-items-center">
                 <span class="spinner-grow spinner-grow-sm text-success me-2" role="status"></span>Live Kitchen Active

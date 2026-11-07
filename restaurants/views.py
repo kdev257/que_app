@@ -15,6 +15,8 @@ from .models import (
     MenuCategory, MenuItem, Table, RestaurantOrder, 
     RestaurantOrderItem, RestaurantLandmark, Highway, HighwayBranch
 )
+from organization.permissions import can_manage_branch, deny, KITCHEN_ROLES, SALON_STAFF_ROLES
+from billing.services import create_invoice_for_token, send_invoice_email
 from .emails import (
     send_order_placed_email,
     send_order_accepted_email,
@@ -644,7 +646,7 @@ def restaurant_payment_callback(request):
             with db_transaction.atomic():
                 # Update Token status
                 token.payment_status = 'paid'
-                token.status = 'serving'
+                token.status = 'in_progress'
                 token.razorpay_payment_id = payment_id
                 token.save()
                 
@@ -717,6 +719,8 @@ def kitchen_dashboard(request, branch_id):
 def accept_order(request, order_id):
     order = get_object_or_404(RestaurantOrder, id=order_id)
     branch_id = order.branch.id
+    if not can_manage_branch(request.user, branch_id, KITCHEN_ROLES):
+        return deny(request)
     
     if request.method == "POST":
         prep_time = request.POST.get('prep_time', '15')
@@ -732,7 +736,7 @@ def accept_order(request, order_id):
             order.expected_delivery_time = timezone.now() + datetime.timedelta(minutes=order.estimated_prep_time_minutes + 20)
             
         if order.order_type == 'dine_in' and table_id:
-            new_table = get_object_or_404(Table, id=table_id)
+            new_table = get_object_or_404(Table, id=table_id, branch_id=branch_id)
             # Release old table if a different table is being assigned
             if order.table and order.table.id != new_table.id:
                 old_table = order.table
@@ -745,7 +749,7 @@ def accept_order(request, order_id):
         # For pay_at_home orders, bypass tentative/payment flow and start preparing
         if order.token.payment_status == 'pay_at_home':
             order.status = 'preparing'
-            order.token.status = 'serving'
+            order.token.status = 'in_progress'
             order.token.save()
             if order.order_type == 'delivery':
                 order.customer_arrived = True
@@ -780,6 +784,8 @@ def accept_order(request, order_id):
 def reject_order(request, order_id):
     order = get_object_or_404(RestaurantOrder, id=order_id)
     branch_id = order.branch.id
+    if not can_manage_branch(request.user, branch_id, KITCHEN_ROLES):
+        return deny(request)
     
     if request.method == "POST":
         reason = request.POST.get('rejection_reason', 'Kitchen overloaded')
@@ -811,6 +817,8 @@ def reject_order(request, order_id):
 def update_order_status(request, order_id, new_status):
     order = get_object_or_404(RestaurantOrder, id=order_id)
     branch_id = order.branch.id
+    if not can_manage_branch(request.user, branch_id, KITCHEN_ROLES):
+        return deny(request)
     
     if new_status in dict(RestaurantOrder.STATUS_CHOICES):
         order.status = new_status
@@ -823,14 +831,17 @@ def update_order_status(request, order_id, new_status):
             
         # Synchronize token status
         token = order.token
+        invoice = None
         if new_status == 'completed':
             token.status = 'completed'
+            token.end_time = timezone.now()
             token.save()
+            invoice = create_invoice_for_token(token, created_by=request.user)
         elif new_status == 'cancelled':
             token.status = 'cancelled'
             token.save()
         elif new_status in ['preparing', 'ready', 'served']:
-            token.status = 'serving'
+            token.status = 'in_progress'
             token.save()
             
         order.save()
@@ -838,6 +849,9 @@ def update_order_status(request, order_id, new_status):
         # Email: notify customer when food is ready
         if new_status == 'ready':
             send_order_ready_email(order)
+        if invoice:
+            send_invoice_email(invoice)
+            messages.info(request, f"Invoice {invoice.invoice_number} generated.")
             
         messages.success(request, f"Order #{order.id} updated to: {order.get_status_display()}.")
         
@@ -868,6 +882,8 @@ def manage_tables(request, branch_id):
 def toggle_table_status(request, table_id):
     table = get_object_or_404(Table, id=table_id)
     branch_id = table.branch.id
+    if not can_manage_branch(request.user, branch_id, KITCHEN_ROLES):
+        return deny(request)
     
     # Toggle occupied status
     table.is_occupied = not table.is_occupied
@@ -927,11 +943,8 @@ def staff_mark_arrived(request, order_id):
     order = get_object_or_404(RestaurantOrder, id=order_id)
     branch_id = order.branch.id
     
-    if not request.user.is_superuser:
-        profile = request.user.user_profile
-        if profile.role not in ['staff', 'branch_admin'] or profile.branch.id != branch_id:
-            messages.error(request, "Access denied.")
-            return redirect('user_profile')
+    if not can_manage_branch(request.user, branch_id, SALON_STAFF_ROLES):
+        return deny(request)
             
     order.customer_arrived = True
     order.save()
@@ -950,17 +963,14 @@ def staff_mark_served(request, order_id):
     order = get_object_or_404(RestaurantOrder, id=order_id)
     branch_id = order.branch.id
     
-    if not request.user.is_superuser:
-        profile = request.user.user_profile
-        if profile.role not in ['staff', 'branch_admin'] or profile.branch.id != branch_id:
-            messages.error(request, "Access denied.")
-            return redirect('user_profile')
+    if not can_manage_branch(request.user, branch_id, SALON_STAFF_ROLES):
+        return deny(request)
             
     order.status = 'served'
     order.save()
     
     token = order.token
-    token.status = 'serving'
+    token.status = 'in_progress'
     token.save()
     
     messages.success(request, f"Order #{order.id} (Token #{order.token.token_number}) marked as SERVED.")
@@ -978,11 +988,8 @@ def staff_mark_completed(request, order_id):
     order = get_object_or_404(RestaurantOrder, id=order_id)
     branch_id = order.branch.id
     
-    if not request.user.is_superuser:
-        profile = request.user.user_profile
-        if profile.role not in ['staff', 'branch_admin'] or profile.branch.id != branch_id:
-            messages.error(request, "Access denied.")
-            return redirect('user_profile')
+    if not can_manage_branch(request.user, branch_id, SALON_STAFF_ROLES):
+        return deny(request)
             
     order.status = 'completed'
     order.save()
@@ -994,9 +1001,12 @@ def staff_mark_completed(request, order_id):
         
     token = order.token
     token.status = 'completed'
+    token.end_time = timezone.now()
     token.save()
+    invoice = create_invoice_for_token(token, created_by=request.user)
+    send_invoice_email(invoice)
     
-    messages.success(request, f"Order #{order.id} (Token #{order.token.token_number}) marked as COMPLETED.")
+    messages.success(request, f"Order #{order.id} (Token #{order.token.token_number}) marked as COMPLETED. Invoice {invoice.invoice_number} generated.")
     
     if request.headers.get('HX-Request') == 'true':
         from django.urls import reverse

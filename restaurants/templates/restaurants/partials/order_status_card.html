@@ -27,6 +27,11 @@
         <i class="bi bi-heart-fill fs-1 d-block mb-1 text-danger"></i>
         <h4 class="fw-bold mb-0">Meal Served!</h4>
         <p class="mb-0 text-white-50 small mt-1">Thank you for dining with us</p>
+        {% if order.token.invoice %}
+        <a href="{% url 'billing:invoice_detail' order.token.invoice.id %}" class="btn btn-light btn-sm rounded-pill mt-3 fw-semibold">
+            <i class="bi bi-receipt me-1"></i> View Invoice
+        </a>
+        {% endif %}
     </div>
     {% elif order.status == 'cancelled' %}
     <div class="py-4 px-4 text-white text-center" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">

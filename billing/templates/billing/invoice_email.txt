@@ -1,0 +1,22 @@
+Hi {{ invoice.customer_name }},
+
+Thank you for visiting {{ invoice.seller_name }}. Here is your invoice.
+
+{% if invoice.is_gst_invoice %}TAX INVOICE{% else %}INVOICE{% endif %}: {{ invoice.invoice_number }}
+Date: {{ invoice.created_at|date:"d M Y, h:i A" }}
+Token: #{{ invoice.token_number }}
+{% if invoice.is_gst_invoice %}GSTIN: {{ invoice.gstin }}
+{% endif %}
+{% for item in items %}- {{ item.description }} x {{ item.quantity }} @ Rs.{{ item.unit_price }} = Rs.{{ item.amount }}
+{% endfor %}
+Subtotal: Rs.{{ invoice.subtotal }}
+{% if invoice.discount_amount > 0 %}Discount: -Rs.{{ invoice.discount_amount }}
+{% endif %}{% if invoice.is_gst_invoice %}Taxable Value: Rs.{{ invoice.taxable_amount }}
+CGST: Rs.{{ invoice.cgst_amount }}
+SGST: Rs.{{ invoice.sgst_amount }}
+{% endif %}{% if invoice.booking_fee > 0 %}Booking Fee: Rs.{{ invoice.booking_fee }}
+{% endif %}{% if invoice.booking_fee_gst_amount > 0 %}GST on Booking Fee @ {{ invoice.booking_fee_gst_percentage }}%: Rs.{{ invoice.booking_fee_gst_amount }}
+{% endif %}TOTAL: Rs.{{ invoice.total_amount }}
+Payment: {{ invoice.payment_status_display }}
+
+Thank you for using QuickQueue!

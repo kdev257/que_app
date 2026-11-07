@@ -11,12 +11,33 @@ from django.contrib.auth.views import (
 from django.urls import reverse_lazy
 from .forms import Registrationform, CustomAuthenticationForm, UserProfileForm, guest_login_form
 from .models import UserProfile
+from django.utils.http import url_has_allowed_host_and_scheme
+from privacy.services import record_consent, log_processing
+
+
+def _safe_next(request):
+    """Return the ?next= URL only if it points to this site (blocks open redirects)."""
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return next_url
+    return None
+
+
+def login_choice(request):
+    """Shown when a visitor picks a service: log in, continue as guest, or register."""
+    next_url = _safe_next(request) or ''
+    if request.user.is_authenticated or request.session.get('guest_id'):
+        return redirect(next_url or 'index')
+    return render(request, 'login/login_choice.html', {'next': next_url})
 
 def registration(request):
     if request.method == 'POST':
         form = Registrationform(request.POST)        
         if form.is_valid():           
-            form.save()
+            new_user = form.save()
+            record_consent(request, user=new_user, age_confirmed=form.cleaned_data['age_confirm'])
             messages.success(request, 'Your registration was successful. Please log in.')
             return redirect('user_login')
         else:
@@ -37,7 +58,7 @@ def user_login(request):
                 login(request, user)
                 messages.success(request, f'Welcome back, {user.username}!')
                 
-                next_url = request.GET.get('next') or request.POST.get('next')
+                next_url = _safe_next(request)
                 if next_url:
                     return redirect(next_url)
                 
@@ -51,7 +72,7 @@ def user_login(request):
                     elif user_profile.role == 'staff':
                         return redirect('restaurants:staff_dashboard', branch_id=user_profile.branch.id)
                     else:
-                        return redirect('admin')
+                        return redirect('admin:index')
                 except UserProfile.DoesNotExist:
                     return redirect('user_profile')
             else:
@@ -69,6 +90,7 @@ def user_profile(request):
         form = UserProfileForm(request.POST, request.FILES, instance=profile, user=request.user)
         if form.is_valid():
             form.save()
+            log_processing('profile_updated', request, subject_user=request.user)
             messages.success(request, 'Profile updated successfully!')
             return redirect('user_login') # Or wherever appropriate
     else:
@@ -81,12 +103,14 @@ def guest_login(request):
         form = guest_login_form(request.POST)
         if form.is_valid():
             guest = form.save()  # Save the guest to the database
+            log_processing('guest_login', request, subject_guest=guest)
+            record_consent(request, guest=guest, age_confirmed=form.cleaned_data['age_confirm'])
             # Store guest ID in session so views can identify this guest
             request.session['guest_id'] = guest.id
             request.session.modified = True
             messages.success(request, f'Welcome, {guest.name}! You have logged in as a guest.')
             
-            next_url = request.GET.get('next') or request.POST.get('next')
+            next_url = _safe_next(request)
             if next_url:
                 return redirect(next_url)
                 

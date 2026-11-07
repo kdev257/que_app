@@ -56,6 +56,11 @@ class PlatformFee(models.Model):
     start_date = models.DateTimeField(null=True, blank=True, help_text="Optional date from which the fee starts applying")
     end_date = models.DateTimeField(null=True, blank=True, help_text="Optional date after which the fee stops applying")
     is_active = models.BooleanField(default=True, help_text="Toggle to enable or disable this fee setup")
+    # GST on the booking fee (platform level)
+    gst_on_fee = models.BooleanField(default=False, help_text="Tick to charge GST on the booking fee")
+    fee_gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=18.00, help_text="GST % on the booking fee")
+    fee_includes_gst = models.BooleanField(default=True, help_text="Tick if the fee amount already includes GST")
+    platform_gstin = models.CharField(max_length=15, blank=True, help_text="Platform GSTIN shown on invoices for the fee GST (optional)")
 
     def is_currently_active(self):
         if not self.is_active:

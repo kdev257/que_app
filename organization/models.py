@@ -35,6 +35,11 @@ class Branch(models.Model):
     closing_time = models.TimeField(default=datetime.time(21, 0),blank=True,null=True,help_text="Format: 9:00 PM" )
     is_open = models.BooleanField(default=False)
     offers_delivery = models.BooleanField(default=False, help_text="Check if this branch offers home delivery")
+    # GST details (used on invoices)
+    is_gst_registered = models.BooleanField(default=False, help_text="Tick if this branch is registered under GST")
+    gstin = models.CharField(max_length=15, blank=True, null=True, help_text="15-character GSTIN (required if GST registered)")
+    gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=18.00, help_text="Total GST % (split equally into CGST + SGST)")
+    prices_include_gst = models.BooleanField(default=True, help_text="Tick if service/menu prices already include GST")
 
     class Meta:
         ordering = ["name"]
@@ -47,6 +52,8 @@ class Branch(models.Model):
         if self.opening_time and self.closing_time:
             if self.opening_time >= self.closing_time:
                 raise ValidationError("Closing time must be after opening time.")
+        if self.is_gst_registered and not (self.gstin and len(self.gstin.strip()) == 15):
+            raise ValidationError({"gstin": "A valid 15-character GSTIN is required when GST registered."})
 
 
 

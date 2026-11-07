@@ -63,6 +63,11 @@
                                     <span class="badge rounded-pill bg-secondary px-3">{{ token.status|title }}</span>
                                 {% endif %}
                             {% endif %}
+                            {% if token.invoice %}
+                                <a href="{% url 'billing:invoice_detail' token.invoice.id %}" class="d-block small mt-1 text-decoration-none">
+                                    <i class="bi bi-receipt"></i> Invoice
+                                </a>
+                            {% endif %}
                         </td>
 
                         <td>

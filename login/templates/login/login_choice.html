@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Continue - QuickQueue{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 75vh;">
+    <div class="col-12 col-md-7 col-lg-5">
+        <div class="card shadow-sm border-0 rounded-4 p-4 p-md-5 text-center">
+            <h2 class="fw-bold mb-2">Almost there!</h2>
+            <p class="text-muted mb-4">Please log in or continue as a guest to book this service.</p>
+
+            <div class="d-grid gap-3">
+                <a href="{% url 'user_login' %}{% if next %}?next={{ next|urlencode }}{% endif %}"
+                   class="btn btn-primary btn-lg rounded-3 fw-semibold">
+                    <i class="bi bi-person-check me-2"></i>Log in
+                </a>
+                <a href="{% url 'guest_login' %}{% if next %}?next={{ next|urlencode }}{% endif %}"
+                   class="btn btn-outline-primary btn-lg rounded-3 fw-semibold">
+                    <i class="bi bi-person me-2"></i>Continue as Guest
+                </a>
+            </div>
+
+            <p class="text-muted small mt-4 mb-0">
+                New here? <a href="{% url 'register' %}" class="fw-semibold text-decoration-none">Create a free account</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -118,8 +118,8 @@
 
                         <td class="text-end pe-4">
                             {% if token.status == "in_progress" %}
-                                <a href="{% url 'end_service' token.id %}" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" onclick="return confirm('Mark service as completed?')">
-                                    <i class="bi bi-check2-circle me-1"></i> Finish
+                                <a href="{% url 'end_service' token.id %}" class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" onclick="return confirm('Complete the service and generate invoice?')">
+                                    <i class="bi bi-receipt me-1"></i> Generate Invoice
                                 </a>
                             {% elif token.status == "waiting" %}
                                 <div class="btn-group shadow-sm rounded-pill overflow-hidden">

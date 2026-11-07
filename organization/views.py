@@ -1,22 +1,26 @@
-from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
-from organization.models import Service
-from accounts.models import Customer
-from queues.services import generate_token
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+
+from .forms import BranchGSTForm
+from .models import Branch
+from .permissions import KITCHEN_ROLES, can_manage_branch, deny
 
 
+@login_required
+def branch_gst_settings(request, branch_id):
+    """Branch admin can set GST registration, GSTIN, GST % and price-includes-GST."""
+    branch = get_object_or_404(Branch, id=branch_id)
+    if not can_manage_branch(request.user, branch.id, KITCHEN_ROLES):  # branch_admin or superuser
+        return deny(request)
 
+    if request.method == "POST":
+        form = BranchGSTForm(request.POST, instance=branch)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "GST settings saved. New invoices will use these settings.")
+            return redirect("shop_dashboard", id=branch.id)
+    else:
+        form = BranchGSTForm(instance=branch)
 
-# def create_token(request, service_id, customer_id):
-#     service = get_object_or_404(Service, id=service_id)
-#     customer = get_object_or_404(Customer, id=customer_id)
-
-#     token = generate_token(service, customer)
-
-#     return JsonResponse({
-#         "token_number": token.number,
-#         "service": service.name,
-#         "date": token.queue.date,
-#     })
-
-# Create your views here.
+    return render(request, "organization/gst_settings.html", {"form": form, "branch": branch})

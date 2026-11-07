@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}My Data &amp; Privacy - QuickQueue{% endblock %}
+{% block content %}
+<div class="mx-auto" style="max-width: 960px;">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+      <h2 class="fw-bold mb-0">My Data &amp; Privacy</h2>
+      <p class="text-muted mb-0">See, download, correct or delete the data we hold about you.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'privacy:export_data' %}" class="btn btn-primary rounded-pill"><i class="bi bi-download me-1"></i>Download my data</a>
+      <a href="{% url 'privacy:notice' %}" class="btn btn-outline-secondary rounded-pill">Privacy Notice</a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+        <h5 class="fw-bold">Data we hold</h5>
+        {% if data.account %}
+          <p class="small mb-1"><b>Name:</b> {{ data.account.first_name }} {{ data.account.last_name }} ({{ data.account.username }})</p>
+          <p class="small mb-1"><b>Email:</b> {{ data.account.email|default:"-" }}</p>
+          {% if data.profile %}
+          <p class="small mb-1"><b>Phone:</b> {{ data.profile.phone_no|default:"-" }}</p>
+          <p class="small mb-1"><b>Address:</b> {{ data.profile.address|default:"-" }}</p>
+          <p class="small mb-1"><b>PIN code:</b> {{ data.profile.pin_code|default:"-" }}</p>
+          {% endif %}
+          <a href="{% url 'user_profile' %}" class="btn btn-sm btn-outline-primary rounded-pill mt-2">Correct my details</a>
+        {% elif data.guest %}
+          <p class="small mb-1"><b>Name:</b> {{ data.guest.name }}</p>
+          <p class="small mb-1"><b>Email:</b> {{ data.guest.email }}</p>
+          <p class="small mb-1"><b>Phone:</b> {{ data.guest.phone_no }}</p>
+          <p class="small mb-1"><b>PIN code:</b> {{ data.guest.pin_code }}</p>
+          <p class="small text-muted mt-2">To correct guest details, use the request form.</p>
+        {% endif %}
+        <p class="small mb-1 mt-3"><b>Bookings:</b> {{ data.bookings|length }} &middot; <b>Invoices:</b> {{ data.invoices|length }}</p>
+        <p class="small mb-1"><b>Shared with:</b></p>
+        <ul class="small mb-0">{% for s in data.shared_with %}<li>{{ s }}</li>{% endfor %}</ul>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+        <h5 class="fw-bold">Make a request or complaint</h5>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form|crispy }}
+          <button type="submit" class="btn btn-primary rounded-pill px-4">Submit</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card border-0 shadow-sm rounded-4 p-4">
+        <h5 class="fw-bold">My requests</h5>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Reference</th><th>Type</th><th>Status</th><th>Reply by</th><th>Response</th></tr></thead>
+            <tbody>
+              {% for r in data_requests %}
+              <tr>
+                <td>{{ r.reference }}</td><td>{{ r.get_request_type_display }}</td><td>{{ r.get_status_display }}</td>
+                <td>{{ r.due_date|date:"d M Y" }}</td><td class="small">{{ r.response|default:"-" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-muted">No requests yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card border-0 shadow-sm rounded-4 p-4">
+        <h5 class="fw-bold">My consents</h5>
+        <ul class="small mb-0">
+          {% for c in consents %}
+          <li>Privacy Notice v{{ c.notice.version }} &middot; given {{ c.given_at|date:"d M Y, h:i A" }}
+            {% if c.withdrawn_at %}&middot; <span class="text-danger">withdrawn {{ c.withdrawn_at|date:"d M Y" }}</span>{% else %}&middot; <span class="text-success">active</span>{% endif %}</li>
+          {% empty %}<li>No consent records.</li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="card border-danger border-1 rounded-4 p-4">
+        <h5 class="fw-bold text-danger">Withdraw consent &amp; delete my data</h5>
+        <p class="small mb-3">Your account will be locked at once. Your data will be deleted after the minimum period the law requires us to keep it. Invoices are kept for tax law.</p>
+        <a href="{% url 'privacy:delete_account' %}" class="btn btn-outline-danger rounded-pill align-self-start">Withdraw consent &amp; delete</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

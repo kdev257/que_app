@@ -13,9 +13,9 @@ class OrganizationAdmin(admin.ModelAdmin):
 
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):
-    list_display = ("id", "organization", "name", "address")
-    search_fields = ("name", "organization__name")
-    list_filter = ("organization",)
+    list_display = ("id", "organization", "name", "address", "is_gst_registered", "gstin", "gst_percentage")
+    search_fields = ("name", "organization__name", "gstin")
+    list_filter = ("organization", "is_gst_registered")
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):

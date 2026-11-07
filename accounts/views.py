@@ -3,12 +3,12 @@ from django.contrib.auth.decorators import login_required
 from organization.models import Service_Category
 from django.utils import timezone
 from .models import Promotion
-from queues.views import login_or_guest_required, customer_required
+from queues.views import customer_required, get_guest
 
 # Create your views here.
 @customer_required
-@login_or_guest_required
 def customer_dashboard(request):
+    """Service categories page. Public: also used as the site landing page."""
     user_id = request.user.id 
     categories = Service_Category.objects.all()
     now = timezone.now()  
@@ -34,6 +34,7 @@ def customer_dashboard(request):
         "user_id": user_id,
         "promotions": promotions,
         "popup_promotions": popup_promotions,
+        "guest": None if request.user.is_authenticated else get_guest(request),
     }
     
 

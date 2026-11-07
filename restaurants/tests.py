@@ -777,7 +777,10 @@ class RestaurantOrderTests(TestCase):
         
         # Kitchen accepts order
         from django.urls import reverse
-        self.client.login(username="cust_order_test", password="testpass")
+        # Only kitchen staff (or superuser) may accept orders
+        from login.models import User
+        User.objects.create_superuser(username="kitchen_accept_test", password="testpass")
+        self.client.login(username="kitchen_accept_test", password="testpass")
         
         response = self.client.post(reverse('restaurants:accept_order', args=[order.id]), {
             'prep_time': '20',
@@ -788,7 +791,7 @@ class RestaurantOrderTests(TestCase):
         
         # Order should be preparing (bypassing tentative)
         self.assertEqual(order.status, 'preparing')
-        self.assertEqual(token.status, 'serving')
+        self.assertEqual(token.status, 'in_progress')
         
         # Subtotal = 2 * 200 = 400. Fee = 5.50. Total = 405.50
         self.assertEqual(token.final_price, Decimal('405.50'))

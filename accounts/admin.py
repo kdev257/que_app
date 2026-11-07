@@ -30,7 +30,7 @@ class PromotionDiscountAdmin(admin.ModelAdmin):
 
 @admin.register(PlatformFee)
 class PlatformFeeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'fee_logged_in', 'fee_guest', 'is_active', 'start_date', 'end_date')
+    list_display = ('name', 'fee_logged_in', 'fee_guest', 'gst_on_fee', 'fee_gst_percentage', 'fee_includes_gst', 'is_active', 'start_date', 'end_date')
     list_filter = ('is_active', 'start_date', 'end_date')
     search_fields = ('name',)
 

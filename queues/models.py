@@ -52,7 +52,7 @@ class Queue(models.Model):
 class Token(models.Model):
     STATUS_CHOICES = [
         ('waiting', 'Waiting'),
-        ('serving', 'Serving'),
+        ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
         ('no_show', 'No Show'),
@@ -112,29 +112,17 @@ class Token(models.Model):
     
     
     def generate_token_number(self, target_date=None):
-        """
-        Generates the next sequential token number specifically for the target_date
-        (whether it's today, tomorrow, or next week).
-        """
+        """Next sequential token number for this token's branch and date."""
+        from .services import next_token_number
         if target_date is None:
             target_date = self.token_date or datetime.date.today()
-        # 1. Look for tokens specifically booked FOR the target_date
-        tokens_for_day = Token.objects.filter(token_date=target_date)
-        
-        # 2. Find the highest token number assigned for that specific day
-        last_token = tokens_for_day.order_by('-token_number').first()
-        
-        if last_token and last_token.token_number:
-            # If tokens already exist for that day, increment the last one
-            return last_token.token_number + 1
-        else:
-            # First token of that specific day always starts at 1
-            return 1
+        return next_token_number(self.branch, target_date)
 
     def save(self, *args, **kwargs):
         # Only generate on create
         if not self.pk and not self.token_number:
             self.token_number = self.generate_token_number()
+        if not self.pk and not self.created_at:
             self.created_at = timezone.now()
 
         super().save(*args, **kwargs)

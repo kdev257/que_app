@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 
 # Create your models here.
 
@@ -55,6 +56,7 @@ class Guest(models.Model):
     email = models.EmailField()
     phone_no = models.CharField(max_length=15)
     pin_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(default=timezone.now)
     
 
     def __str__(self):

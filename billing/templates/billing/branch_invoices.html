@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Invoices - {{ branch.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">Invoices &middot; {{ branch.name }}</h3>
+    <a href="{% url 'shop_dashboard' branch.id %}" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-arrow-left"></i> Dashboard</a>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th class="ps-4">Invoice No</th>
+                    <th>Date</th>
+                    <th>Token</th>
+                    <th>Customer</th>
+                    <th class="text-end">Total (₹)</th>
+                    <th>Payment</th>
+                    <th class="text-end pe-4"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                <tr>
+                    <td class="ps-4 fw-semibold">{{ inv.invoice_number }}</td>
+                    <td>{{ inv.created_at|date:"d M Y, h:i A" }}</td>
+                    <td>#{{ inv.token_number }}</td>
+                    <td>{{ inv.customer_name }}</td>
+                    <td class="text-end">{{ inv.total_amount }}</td>
+                    <td>{{ inv.payment_status_display }}</td>
+                    <td class="text-end pe-4">
+                        <a href="{% url 'billing:invoice_detail' inv.id %}" class="btn btn-sm btn-outline-primary rounded-pill">
+                            <i class="bi bi-receipt"></i> View / Print
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-5">No invoices yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

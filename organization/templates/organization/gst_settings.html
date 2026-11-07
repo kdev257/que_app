@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}GST Settings - {{ branch.name }}{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card shadow-sm border-0 rounded-4 p-4 p-md-5">
+            <h3 class="fw-bold mb-1">GST Settings</h3>
+            <p class="text-muted mb-4">{{ branch.name }} &middot; Used for all new invoices of this branch.</p>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {{ form|crispy }}
+                <div class="small text-muted mb-4">
+                    If <b>prices include GST</b> is ticked, GST is taken out of the price and the bill total stays the same.
+                    If not ticked, GST is added on top of the price.
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Save</button>
+                    <a href="{% url 'shop_dashboard' branch.id %}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

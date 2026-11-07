@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm,PasswordChangeForm,PasswordResetForm,AuthenticationForm
 from .models import Guest, User,UserProfile
+from privacy.forms import ConsentFieldsMixin
 
 class CustomAuthenticationForm(AuthenticationForm):
     class Meta:
@@ -37,12 +38,14 @@ class UserProfileForm(forms.ModelForm):
         # Add an ID to the role field for the JavaScript to find easily
         self.fields['role'].widget.attrs.update({'id': 'id_role_select'})            
 
-class Registrationform(UserCreationForm):
+class Registrationform(ConsentFieldsMixin, UserCreationForm):
+    """Sign-up form. The two consent ticks (18+ and privacy notice) are required (DPDP Act)."""
     class Meta:
         model = User        
         fields =['username','first_name','last_name','password1','password2','email']    
 
-class guest_login_form(forms.ModelForm):
+class guest_login_form(ConsentFieldsMixin, forms.ModelForm):
+    """Guest form. The two consent ticks (18+ and privacy notice) are required (DPDP Act)."""
     class Meta:
         model = Guest
         fields = ['name', 'email', 'phone_no', 'pin_code']
