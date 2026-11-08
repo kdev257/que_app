@@ -37,7 +37,12 @@ urlpatterns = [
     path('restaurant/', include('restaurants.urls')),
     path('billing/', include('billing.urls')),
     path('privacy/', include('privacy.urls')),
+    path('workspace/', include('workspace.urls')),
+    path('reviews/', include('reviews.urls')),
     path('log/logout/', auth_views.LogoutView.as_view(next_page='/log/login/'), name='logout'),
+    # Password reset email in HTML (must come before the include below)
+    path('registration/password_reset/', auth_views.PasswordResetView.as_view(
+        html_email_template_name='emails/password_reset.html'), name='password_reset'),
     path('registration/', include('django.contrib.auth.urls')),
     
 ]

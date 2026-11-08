@@ -135,6 +135,7 @@
                         </div>
                     </div>
                 </form>
+                {% if match_note %}<div class="small text-muted text-center mt-2"><i class="bi bi-geo-alt"></i> {{ match_note }}</div>{% endif %}
                 {% endif %}
 
                 <!-- Highway Search Form -->
@@ -219,6 +220,7 @@
                                         {% endif %}
                                     </div>
                                     <p class="card-text text-muted mb-2 small"><i class="bi bi-geo-alt-fill me-1"></i>{{ branch.locality }}, {{ branch.city }}</p>
+                                    <div class="mb-2">{% include "reviews/_branch_rating.html" with b=branch %}</div>
                                     
                                     <!-- Landmarks info -->
                                     {% if branch.landmarks.all %}

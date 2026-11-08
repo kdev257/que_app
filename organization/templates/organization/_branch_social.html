@@ -1,0 +1,10 @@
+{# Branch social links. Pass the branch as "b"; optional btn_class (default outline). #}
+{% if b.has_social_links %}
+<div class="d-inline-flex flex-wrap gap-2 align-items-center">
+  {% if b.whatsapp_link %}<a href="{{ b.whatsapp_link }}" target="_blank" rel="noopener" class="btn btn-sm rounded-pill {{ btn_class|default:'btn-outline-success' }}" title="Chat on WhatsApp"><i class="bi bi-whatsapp"></i><span class="d-none d-sm-inline ms-1">WhatsApp</span></a>{% endif %}
+  {% if b.instagram_url %}<a href="{{ b.instagram_url }}" target="_blank" rel="noopener" class="btn btn-sm rounded-pill {{ btn_class|default:'btn-outline-danger' }}" title="Instagram"><i class="bi bi-instagram"></i><span class="d-none d-sm-inline ms-1">Instagram</span></a>{% endif %}
+  {% if b.facebook_url %}<a href="{{ b.facebook_url }}" target="_blank" rel="noopener" class="btn btn-sm rounded-pill {{ btn_class|default:'btn-outline-primary' }}" title="Facebook"><i class="bi bi-facebook"></i><span class="d-none d-sm-inline ms-1">Facebook</span></a>{% endif %}
+  {% if b.google_maps_url %}<a href="{{ b.google_maps_url }}" target="_blank" rel="noopener" class="btn btn-sm rounded-pill {{ btn_class|default:'btn-outline-dark' }}" title="Map & Google reviews"><i class="bi bi-geo-alt"></i><span class="d-none d-sm-inline ms-1">Map</span></a>{% endif %}
+  {% if b.website_url %}<a href="{{ b.website_url }}" target="_blank" rel="noopener" class="btn btn-sm rounded-pill {{ btn_class|default:'btn-outline-secondary' }}" title="Website"><i class="bi bi-globe"></i><span class="d-none d-sm-inline ms-1">Website</span></a>{% endif %}
+</div>
+{% endif %}

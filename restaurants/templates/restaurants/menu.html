@@ -66,7 +66,12 @@
         <!-- Menu Header Banner -->
         <div class="menu-header p-4 p-md-5 mb-5 text-center position-relative overflow-hidden">
             <h1 class="fw-bold mb-2">{{ branch.name }}</h1>
+            <div class="mb-2">{% include "reviews/_branch_rating.html" with b=branch %}</div>
             <p class="mb-3 opacity-75"><i class="bi bi-geo-alt-fill me-1"></i>{{ branch.address }}, {{ branch.city }}</p>
+            <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
+                {% include "organization/_branch_social.html" with b=branch btn_class="btn-light" %}
+                {% include "organization/_share_buttons.html" with share_text="Order from "|add:branch.name|add:" on QuickQueue" btn_class="btn-light" %}
+            </div>
             {% if branch.highway_info %}
             <span class="badge bg-white-50 text-white rounded-pill px-3 py-1.5 fs-6">
                 <i class="bi bi-compass me-1"></i>Highway {{ branch.highway_info.highway.name }} (KM {{ branch.highway_info.milestone_km }})

@@ -172,13 +172,25 @@ def send_invoice_email(invoice):
     if invoice is None or invoice.email_sent or not invoice.customer_email:
         return False
     try:
-        context = {"invoice": invoice, "items": invoice.items.all()}
+        from django.urls import reverse
+        from core.emails import build_email, from_address, site_link
+        from reviews.services import rate_link
+        from .views import invoice_link_key
+        context = {
+            "invoice": invoice,
+            "items": invoice.items.all(),
+            "rate_url": rate_link(invoice.token) if invoice.token_id else "",
+            "invoice_url": site_link(reverse("billing:invoice_detail", args=[invoice.id]))
+                           + f"?k={invoice_link_key(invoice)}",
+            "preheader": f"Your invoice from {invoice.seller_name}. Total ₹{invoice.total_amount}",
+        }
         text_body = render_to_string("billing/invoice_email.txt", context)
-        html_body = render_to_string("billing/invoice_email.html", context)
+        html_body, _ = build_email(f"Invoice {invoice.invoice_number}", template="billing/invoice_email.html",
+                                   text_body=text_body, **context)
         message = EmailMultiAlternatives(
             subject=f"Invoice {invoice.invoice_number} - {invoice.seller_name}",
             body=text_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=from_address(),
             to=[invoice.customer_email],
         )
         message.attach_alternative(html_body, "text/html")

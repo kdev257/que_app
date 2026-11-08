@@ -13,9 +13,16 @@ class OrganizationAdmin(admin.ModelAdmin):
 
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):
-    list_display = ("id", "organization", "name", "address", "is_gst_registered", "gstin", "gst_percentage")
+    list_display = ("id", "organization", "name", "address", "is_approved", "rating_avg", "rating_count", "is_gst_registered", "gstin")
     search_fields = ("name", "organization__name", "gstin")
-    list_filter = ("organization", "is_gst_registered")
+    list_filter = ("is_approved", "organization", "is_gst_registered")
+    readonly_fields = ("rating_avg", "rating_count")
+    actions = ["approve_branches"]
+
+    @admin.action(description="Approve selected branches (show to customers)")
+    def approve_branches(self, request, queryset):
+        count = queryset.update(is_approved=True)
+        self.message_user(request, f"{count} branch(es) approved.")
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
@@ -31,14 +38,16 @@ class RegistrationAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ("id", "branch", "name")
-    search_fields = ("name","branch__name")
+    list_display = ("id", "branch", "name", "price", "average_time_minutes", "is_active")
+    search_fields = ("name__name", "branch__name", "description")
     list_filter = ("branch",)
     ordering = ("name",)
     
 @admin.register(Service_Name)
 class ServiceNameAdmin(admin.ModelAdmin):
-    list_display = ("id", "name")
+    list_display = ("id", "name", "icon", "icon_group")
+    list_editable = ("icon", "icon_group")
+    list_filter = ("icon_group",)
     search_fields = ("name",)
     ordering = ("name",)    
     

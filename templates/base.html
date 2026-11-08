@@ -81,17 +81,18 @@
         </button>
 
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto align-items-center">
-                <ul class="navbar-nav ms-auto align-items-center">
-                    {% if user.is_authenticated %}
-                        <li class="nav-item me-3"><span class="text-light">Hi, {{ user.first_name }}</span></li>
-                        <li class="nav-item"><a class="btn btn-outline-light btn-sm px-3" href="{% url 'logout_view' %}">Logout</a></li>
-                    {% else %}
-                        <li class="nav-item"><a class="nav-link text-light me-3" href="{% url 'user_login' %}">Login</a></li>
-                        <li class="nav-item"><a class="nav-link text-light me-3" href="{% url 'guest_login' %}">Guest Login</a></li>
-                        <li class="nav-item"><a class="btn btn-primary rounded-pill px-4" href="{% url 'register' %}">Register Free</a></li>
-                    
-                </ul>
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-2 py-2 py-lg-0">
+                {% if user.is_authenticated %}
+                    {% if HAS_WORKSPACE %}
+                    <li class="nav-item"><a class="btn btn-warning btn-sm rounded-pill px-3 fw-semibold" href="{% url 'workspace:home' %}"><i class="bi bi-briefcase"></i> Business Workspace</a></li>
+                    {% endif %}
+                    <li class="nav-item"><span class="text-light">Hi, {{ user.first_name|default:user.username }}</span></li>
+                    <li class="nav-item"><a class="btn btn-outline-light btn-sm px-3" href="{% url 'logout_view' %}">Logout</a></li>
+                {% else %}
+                    <li class="nav-item"><a class="nav-link text-light" href="{% url 'user_login' %}">Login</a></li>
+                    <li class="nav-item"><a class="nav-link text-light" href="{% url 'guest_login' %}">Guest Login</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning" href="{% url 'workspace:signup' %}">List your business</a></li>
+                    <li class="nav-item"><a class="btn btn-primary rounded-pill px-4" href="{% url 'register' %}">Register Free</a></li>
                 {% endif %}
             </ul>
         </div>

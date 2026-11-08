@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<style>
+  .ws-nav { display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .25rem; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .ws-nav::-webkit-scrollbar { display: none; }
+  .ws-nav a { white-space: nowrap; }
+  .ws-card { border: 0; border-radius: 1rem; box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+</style>
+{% block ws_css %}{% endblock %}
+{% endblock %}
+{% block content %}
+<div class="mx-auto" style="max-width: 1000px;">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <div class="small text-muted text-uppercase fw-semibold">Business Workspace</div>
+      <h3 class="fw-bold mb-0">{% block ws_title %}{% endblock %}</h3>
+    </div>
+    {% if branch %}
+      {% if branch.is_approved %}<span class="badge bg-success-subtle text-success border border-success">Live for customers</span>
+      {% else %}<span class="badge bg-warning-subtle text-warning-emphasis border border-warning">Waiting for approval</span>{% endif %}
+    {% endif %}
+  </div>
+
+  {% if branch %}
+  {% with rest=branch.services_category.name|lower %}
+  <nav class="ws-nav mb-4">
+    <a href="{% url 'workspace:home' %}" class="btn btn-sm btn-outline-secondary rounded-pill"><i class="bi bi-grid"></i> All branches</a>
+    <a href="{% url 'workspace:branch_edit' branch.id %}" class="btn btn-sm rounded-pill {% if active == 'details' %}btn-dark{% else %}btn-outline-dark{% endif %}">Details</a>
+    {% if rest == 'restaurant' %}
+    <a href="{% url 'workspace:menu' branch.id %}" class="btn btn-sm rounded-pill {% if active == 'services' %}btn-dark{% else %}btn-outline-dark{% endif %}">Menu</a>
+    <a href="{% url 'restaurants:manage_tables' branch.id %}" class="btn btn-sm rounded-pill btn-outline-dark">Tables</a>
+    {% else %}
+    <a href="{% url 'workspace:services' branch.id %}" class="btn btn-sm rounded-pill {% if active == 'services' %}btn-dark{% else %}btn-outline-dark{% endif %}">Services &amp; rates</a>
+    {% endif %}
+    <a href="{% url 'branch_gst_settings' branch.id %}" class="btn btn-sm rounded-pill btn-outline-dark">GST</a>
+    <a href="{% url 'billing:branch_invoices' branch.id %}" class="btn btn-sm rounded-pill btn-outline-dark">Invoices</a>
+    <a href="{% url 'workspace:reviews' branch.id %}" class="btn btn-sm rounded-pill {% if active == 'reviews' %}btn-dark{% else %}btn-outline-dark{% endif %}">Reviews</a>
+    <a href="{% url 'shop_dashboard' branch.id %}" class="btn btn-sm rounded-pill btn-primary"><i class="bi bi-speedometer2"></i> {% if rest == 'restaurant' %}Kitchen{% else %}Today's queue{% endif %}</a>
+  </nav>
+  {% endwith %}
+  {% endif %}
+
+  {% block ws_content %}{% endblock %}
+</div>
+{% endblock %}

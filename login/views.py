@@ -67,12 +67,17 @@ def user_login(request):
                     user_profile = user.user_profile # Assumes related_name='user_profile'
                     if user_profile.role == 'customer':
                         return redirect('customer_dashboard')
+                    elif user_profile.role == 'org_admin':
+                        return redirect('workspace:home')
                     elif user_profile.role == 'branch_admin':
-                        return redirect('shop_dashboard', id=user_profile.branch.id)
-                    elif user_profile.role == 'staff':
-                        return redirect('restaurants:staff_dashboard', branch_id=user_profile.branch.id)
-                    else:
+                        if user_profile.branch_id:
+                            return redirect('shop_dashboard', id=user_profile.branch_id)
+                        return redirect('workspace:home')
+                    elif user_profile.role == 'staff' and user_profile.branch_id:
+                        return redirect('restaurants:staff_dashboard', branch_id=user_profile.branch_id)
+                    elif user.is_staff:
                         return redirect('admin:index')
+                    return redirect('index')
                 except UserProfile.DoesNotExist:
                     return redirect('user_profile')
             else:

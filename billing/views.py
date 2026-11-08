@@ -9,7 +9,29 @@ from privacy.services import log_processing
 from .models import Invoice
 
 
+INVOICE_LINK_SALT = "billing.invoice"
+INVOICE_LINK_DAYS = 90
+
+
+def invoice_link_key(invoice):
+    from django.core import signing
+    return signing.dumps(invoice.id, salt=INVOICE_LINK_SALT)
+
+
+def _key_ok(request, invoice):
+    from django.core import signing
+    key = request.GET.get("k")
+    if not key:
+        return False
+    try:
+        return signing.loads(key, salt=INVOICE_LINK_SALT, max_age=INVOICE_LINK_DAYS * 24 * 3600) == invoice.id
+    except signing.BadSignature:
+        return False
+
+
 def _can_view_invoice(request, invoice):
+    if _key_ok(request, invoice):  # signed link from the invoice email
+        return True
     user = request.user
     if user.is_authenticated:
         if invoice.customer_user_id == user.id:

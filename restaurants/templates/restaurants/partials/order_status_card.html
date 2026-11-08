@@ -32,6 +32,11 @@
             <i class="bi bi-receipt me-1"></i> View Invoice
         </a>
         {% endif %}
+        {% if order.token.status == 'completed' %}
+        <a href="{% url 'reviews:rate_visit' order.token.id %}" class="btn btn-warning btn-sm rounded-pill mt-3 fw-semibold">
+            {% if order.token.review %}Your rating: {{ order.token.review.stars }}{% else %}<i class="bi bi-star me-1"></i> Rate your meal{% endif %}
+        </a>
+        {% endif %}
     </div>
     {% elif order.status == 'cancelled' %}
     <div class="py-4 px-4 text-white text-center" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">

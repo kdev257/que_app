@@ -1,0 +1,65 @@
+{% extends "workspace/_layout.html" %}
+{% block title %}Business Workspace - QuickQueue{% endblock %}
+{% block ws_title %}{% if organization %}{{ organization.name }}{% else %}Your branches{% endif %}{% endblock %}
+{% block ws_content %}
+{% if is_owner %}
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="{% url 'workspace:branch_add' %}" class="btn btn-primary rounded-pill"><i class="bi bi-plus-lg"></i> Add branch</a>
+  <a href="{% url 'workspace:org_edit' %}" class="btn btn-outline-secondary rounded-pill">Organization details</a>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  {% for row in rows %}
+  {% with b=row.branch %}
+  <div class="col-md-6">
+    <div class="card ws-card p-3 h-100">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+        <div>
+          <h5 class="fw-bold mb-0">{{ b.name }}</h5>
+          <div class="small text-muted">{{ b.services_category|default:"-" }} &middot; {{ b.city|default:"" }} {{ b.pin_code|default:"" }}</div>
+        </div>
+        {% include "reviews/_branch_rating.html" with b=b %}
+      </div>
+
+      <div class="small fw-semibold mb-1">Setup: {{ row.done }} of {{ row.total }} done</div>
+      <div class="progress mb-2" style="height: 6px;">
+        <div class="progress-bar bg-success" style="width: {% widthratio row.done row.total 100 %}%"></div>
+      </div>
+      <ul class="list-unstyled small mb-3">
+        {% for label, ok, url_name in row.steps %}
+        <li class="mb-1">
+          {% if ok %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+          {% if url_name and not ok %}<a href="{% url url_name b.id %}">{{ label }}</a>{% else %}{{ label }}{% endif %}
+          {% if label == "Approved by QuickQueue" and not ok %}<span class="text-muted">(we will review your branch)</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+
+      <div class="d-flex flex-wrap gap-2 mt-auto">
+        <a href="{% url 'workspace:branch_edit' b.id %}" class="btn btn-sm btn-outline-dark rounded-pill">Details</a>
+        {% if row.is_restaurant %}
+        <a href="{% url 'workspace:menu' b.id %}" class="btn btn-sm btn-outline-dark rounded-pill">Menu ({{ b.menu_count }})</a>
+        {% else %}
+        <a href="{% url 'workspace:services' b.id %}" class="btn btn-sm btn-outline-dark rounded-pill">Services ({{ b.service_count }})</a>
+        {% endif %}
+        <a href="{% url 'shop_dashboard' b.id %}" class="btn btn-sm btn-primary rounded-pill">{% if row.is_restaurant %}Kitchen{% else %}Today's queue{% endif %}</a>
+      </div>
+    </div>
+  </div>
+  {% endwith %}
+  {% empty %}
+  <div class="col-12">
+    <div class="card ws-card p-4 text-center">
+      <h5 class="fw-bold">No branches yet</h5>
+      {% if is_owner %}
+      <p class="text-muted">Add your first branch to start taking bookings.</p>
+      <a href="{% url 'workspace:branch_add' %}" class="btn btn-primary rounded-pill align-self-center px-4">Add branch</a>
+      {% else %}
+      <p class="text-muted mb-0">No branch is linked to your account. Please contact your business owner.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

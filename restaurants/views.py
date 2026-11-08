@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.db.models import Q
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -33,7 +33,8 @@ def search_highway_restaurants(highway_id, current_km, direction, range_km=Decim
     # 1. Fetch upcoming branches on the selected highway within range (filter only 'restaurant' category)
     query = HighwayBranch.objects.filter(
         highway_id=highway_id,
-        branch__services_category__name__iexact='restaurant'
+        branch__services_category__name__iexact='restaurant',
+        branch__is_approved=True,
     )
     
     if direction == 'UP':
@@ -102,12 +103,13 @@ def restaurant_search(request):
             user_pincode = guest.pin_code
 
     # Query lists for selection dropdowns
-    branches_qs = Branch.objects.filter(services_category__name__iexact='restaurant')
+    branches_qs = Branch.objects.filter(services_category__name__iexact='restaurant', is_approved=True)
     
     cities = branches_qs.exclude(city__isnull=True).exclude(city='').values_list('city', flat=True).distinct().order_by('city')
     pin_codes = branches_qs.exclude(pin_code__isnull=True).exclude(pin_code='').values_list('pin_code', flat=True).distinct().order_by('pin_code')
     landmarks = RestaurantLandmark.objects.filter(branch__services_category__name__iexact='restaurant').values_list('name', flat=True).distinct().order_by('name')
 
+    match_note = ""
     if search_type == 'highway':
         highway_id = request.GET.get('highway')
         current_km_str = request.GET.get('current_km', '0')
@@ -159,15 +161,13 @@ def restaurant_search(request):
                 Q(pin_code__icontains=search_query) |
                 Q(landmarks__name__icontains=search_query)
             ).distinct()
-        elif user_pincode:
-            if delivery_only:
-                branches = branches_qs
-            else:
-                branches = branches_qs.filter(pin_code=user_pincode)
-                if not branches.exists():
-                    branches = branches_qs
-        else:
+        elif delivery_only:
             branches = branches_qs
+        else:
+            # Nearest first: same PIN -> nearby PINs (same first 3 digits) -> customer's city -> all
+            from organization.matching import customer_location, match_nearby
+            loc = customer_location(request)
+            branches, match_note = match_nearby(branches_qs, loc["pin"], loc["city"])
 
     delivery_only = request.GET.get('delivery_only') == 'on'
 
@@ -182,6 +182,7 @@ def restaurant_search(request):
         'pin_codes': pin_codes,
         'landmarks': landmarks,
         'delivery_only': delivery_only,
+        'match_note': match_note,
     }
     return render(request, 'restaurants/restaurant_search.html', context)
 
@@ -193,6 +194,8 @@ def restaurant_search(request):
 @login_or_guest_required
 def menu_view(request, branch_id):
     branch = get_object_or_404(Branch, id=branch_id)
+    if not branch.is_approved and not can_manage_branch(request.user, branch.id):
+        raise Http404("Restaurant not found")
     categories = MenuCategory.objects.filter(branch=branch).prefetch_related('menu_items')
     
     # Get session cart
@@ -676,16 +679,8 @@ def restaurant_payment_callback(request):
 @login_required
 def kitchen_dashboard(request, branch_id):
     # Verify user is branch admin for this branch or a superuser
-    if not request.user.is_superuser:
-        from login.models import UserProfile
-        try:
-            profile = request.user.user_profile
-            if profile.role != 'branch_admin' or not profile.branch or profile.branch.id != branch_id:
-                messages.error(request, "Access denied.")
-                return redirect('user_profile')
-        except UserProfile.DoesNotExist:
-            messages.error(request, "Access denied.")
-            return redirect('user_profile')
+    if not can_manage_branch(request.user, branch_id, KITCHEN_ROLES):
+        return deny(request)
         
     branch = get_object_or_404(Branch, id=branch_id)
     
@@ -861,16 +856,8 @@ def update_order_status(request, order_id, new_status):
 @login_required
 def manage_tables(request, branch_id):
     # Verify user is branch admin for this branch or a superuser
-    if not request.user.is_superuser:
-        from login.models import UserProfile
-        try:
-            profile = request.user.user_profile
-            if profile.role != 'branch_admin' or not profile.branch or profile.branch.id != branch_id:
-                messages.error(request, "Access denied.")
-                return redirect('user_profile')
-        except UserProfile.DoesNotExist:
-            messages.error(request, "Access denied.")
-            return redirect('user_profile')
+    if not can_manage_branch(request.user, branch_id, KITCHEN_ROLES):
+        return deny(request)
         
     branch = get_object_or_404(Branch, id=branch_id)
     tables = Table.objects.filter(branch=branch).order_by('table_number')
@@ -896,16 +883,8 @@ def toggle_table_status(request, table_id):
 @never_cache
 @login_required
 def staff_dashboard(request, branch_id):
-    if not request.user.is_superuser:
-        from login.models import UserProfile
-        try:
-            profile = request.user.user_profile
-            if profile.role not in ['staff', 'branch_admin'] or not profile.branch or profile.branch.id != branch_id:
-                messages.error(request, "Access denied.")
-                return redirect('user_profile')
-        except UserProfile.DoesNotExist:
-            messages.error(request, "Access denied.")
-            return redirect('user_profile')
+    if not can_manage_branch(request.user, branch_id, SALON_STAFF_ROLES):
+        return deny(request)
             
     branch = get_object_or_404(Branch, id=branch_id)
     
@@ -1020,16 +999,8 @@ def staff_mark_completed(request, order_id):
 def toggle_delivery_status(request, branch_id):
     branch = get_object_or_404(Branch, id=branch_id)
     
-    if not request.user.is_superuser:
-        from login.models import UserProfile
-        try:
-            profile = request.user.user_profile
-            if profile.role != 'branch_admin' or not profile.branch or profile.branch.id != branch_id:
-                messages.error(request, "Access denied.")
-                return redirect('user_profile')
-        except UserProfile.DoesNotExist:
-            messages.error(request, "Access denied.")
-            return redirect('user_profile')
+    if not can_manage_branch(request.user, branch_id, KITCHEN_ROLES):
+        return deny(request)
             
     if hasattr(branch, 'highway_info'):
         messages.error(request, "Highway branches cannot offer home delivery.")

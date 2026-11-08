@@ -1,7 +1,7 @@
 import traceback
 
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse, HttpResponse
+from django.http import Http404, JsonResponse, HttpResponse
 from login.forms import guest_login_form
 from organization.models import Service, Service_Category, Branch
 from accounts.models import Customer
@@ -96,32 +96,34 @@ def service_list(request, service_category_id):
     if category.name.lower() == 'restaurant':
         return redirect('restaurants:restaurant_search')
 
-    if request.user.is_authenticated:
-        user_pincode = request.user.user_profile.pin_code
-        branch_pincodes = Branch.objects.filter(pin_code=user_pincode).values_list('pin_code', flat=True)
-        branches = Branch.objects.filter(
-            services_category=service_category_id,
-            pin_code__in=branch_pincodes
-        ).distinct()
-    else:
-        # Use the session guest (not the last DB guest) to get the correct pincode
-        guest = get_guest(request)
-        if guest and guest.pin_code:
-            branches = Branch.objects.filter(
-                services_category=service_category_id,
-                pin_code=guest.pin_code
-            ).distinct()
-        else:
-            # Guest session missing or expired – redirect to guest login
-            branches = Branch.objects.none()
+    from organization.matching import filter_options, find_branches
 
-    return render(request, "queues/services.html", {"services": branches})
+    base_qs = Branch.objects.filter(services_category=category, is_approved=True).select_related("organization", "services_category")
+    # Search (name / city / area / landmark / PIN) or, by default, nearest first:
+    # same PIN -> nearby PINs (same first 3 digits) -> customer's city -> all
+    branches, match_note, is_search = find_branches(request, base_qs)
+    options = filter_options(base_qs)
+
+    return render(request, "queues/services.html", {
+        "services": branches,
+        "category": category,
+        "match_note": match_note,
+        "is_search": is_search,
+        "filter_lists": [
+            ("city", "City", options["cities"]),
+            ("locality", "Area / locality", options["localities"]),
+            ("landmark", "Landmark", options["landmarks"]),
+            ("pin_code", "PIN code", options["pin_codes"]),
+        ],
+    })
 
 @customer_required
 @login_or_guest_required
 def branch_services(request, branch_id):
     # 1. Use get_object_or_404 to prevent crashes if branch_id is invalid
     branch = get_object_or_404(Branch, id=branch_id)
+    if not branch.is_approved and not can_manage_branch(request.user, branch.id):
+        raise Http404("Branch not found")
     
     # Redirect to restaurant menu if this branch is a restaurant
     if branch.services_category and branch.services_category.name.lower() == 'restaurant':
@@ -131,7 +133,7 @@ def branch_services(request, branch_id):
     today = datetime.date.today()
     recalculate_queue_times(branch, today)
     
-    services = Service.objects.filter(branch_id=branch_id)
+    services = Service.objects.filter(branch_id=branch_id, is_active=True)
     is_open = branch.is_open # Direct access since we fetched the object
     
     # Calculate prospective booking wait time dynamically based on the next available staff slot
@@ -302,21 +304,13 @@ from django.conf import settings
 # Ensure these are imported correctly in your models/views
 # from .models import Cart, CartItem, Token, TokenService
 from django.utils.dateparse import parse_date
-def _send_after_commit(subject, message, email):
+def _send_after_commit(subject, email, **content):
     """
-    Send an email only after the booking is saved, and never let an email
-    problem (e.g. SMTP disconnect) break or roll back the booking.
+    Send a branded HTML email only after the booking is saved, and never let an
+    email problem (e.g. SMTP disconnect) break or roll back the booking.
     """
-    import logging
-
-    def _send():
-        try:
-            send_mail(subject=subject, message=message, from_email=settings.EMAIL_HOST_USER or settings.DEFAULT_FROM_EMAIL,
-                      recipient_list=[email], fail_silently=False)
-        except Exception:
-            logging.getLogger(__name__).exception("Booking email to %s failed", email)
-
-    db_transaction.on_commit(_send)
+    from core.emails import send_email
+    db_transaction.on_commit(lambda: send_email(subject, email, **content))
 
 
 def _execute_token_creation(request, cart, booking_date, commute_time, payment_status='unpaid', razorpay_order_id=None, razorpay_payment_id=None):
@@ -457,37 +451,30 @@ def _execute_token_creation(request, cart, booking_date, commute_time, payment_s
     if 'claimed_promotion_id' in request.session:
         del request.session['claimed_promotion_id']
 
-    # Email notification
-    if token.user and token.user.email:
-        email_message = f"""
-    Hi {token.user.first_name},
-    Welcome to {token.branch.name}!
-    Your token has been generated successfully.
-    -------------------------------------------
-    Token Number: {token.token_number}
-    Expected Wait at Saloon: {token.expected_waiting_time:.0f} mins
-    Recommended Leave Time: {leave_home_at.strftime('%I:%M %p')}
-    Expected Service Start: {token.expected_start_time.strftime('%I:%M %p')}
-    current_token_being_served: {last_active_token.token_number if last_active_token else 'N/A'}
-    -------------------------------------------
-    Thank you for using QuickQueue!
-    """
-        _send_after_commit("Token Confirmation - QuickQueue", email_message, token.user.email)
-    elif token.guest and token.guest.email:
-        guest_obj = token.guest
-        email_message = f"""
-    Hi {guest_obj.name},
-    Welcome to {token.branch.name}!
-    Your token has been generated successfully.
-    -------------------------------------------
-    Token Number: {token.token_number}
-    Expected Wait at Saloon: {token.expected_waiting_time:.0f} mins
-    Recommended Leave Home Time: {leave_home_at.strftime('%I:%M %p')}
-    Expected Service Start: {token.expected_start_time.strftime('%I:%M %p')}
-    -------------------------------------------
-    Thank you for using QuickQueue!
-    """
-        _send_after_commit("Token Confirmation - QuickQueue", email_message, guest_obj.email)
+    # Email notification (HTML)
+    email = token.user.email if token.user else (token.guest.email if token.guest else None)
+    if email:
+        from core.emails import site_link
+        name = (token.user.first_name or token.user.username) if token.user else token.guest.name
+        rows = [
+            ("Branch", token.branch.name),
+            ("Token number", f"#{token.token_number}"),
+            ("Date", token.token_date.strftime('%d %b %Y') if token.token_date else "Today"),
+            ("Expected wait", f"{token.expected_waiting_time:.0f} mins"),
+            ("Leave home at", leave_home_at.strftime('%I:%M %p')),
+            ("Service starts at", token.expected_start_time.strftime('%I:%M %p')),
+        ]
+        if token.user and last_active_token:
+            rows.append(("Now serving", f"#{last_active_token.token_number}"))
+        _send_after_commit(
+            f"Token #{token.token_number} confirmed - {token.branch.name}", email,
+            heading="Your token is confirmed",
+            greeting=f"Hi {name},",
+            paragraphs=[f"Welcome to {token.branch.name}! Your place in the queue is booked."],
+            rows=rows,
+            button_text="Open QuickQueue", button_url=site_link("/"),
+            note="Times are estimates and update as the queue moves.",
+        )
 
     return token
 
@@ -726,19 +713,16 @@ def handle_no_show(request, token_id):
             continue
         name = (t.user.first_name or t.user.username) if t.user else t.guest.name
         start = t.expected_start_time.strftime('%I:%M %p') if t.expected_start_time else '-'
-        send_mail(
-            subject="Queue Update Notification",
-            message=(
-                f"Hi {name},\n\n"
-                f"The queue at {branch.name} has moved faster.\n"
-                f"Token Number: {t.token_number}\n"
-                f"Updated Expected Waiting Time: {t.expected_waiting_time or 0} minutes\n"
-                f"Updated Expected Start Time: {start}\n\n"
-                f"Thank you for using QuickQueue!"
-            ),
-            from_email=settings.EMAIL_HOST_USER or settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=True,
+        from core.emails import send_email
+        send_email(
+            f"Queue update - {branch.name}", email,
+            heading="Good news: the queue moved faster",
+            greeting=f"Hi {name},",
+            paragraphs=[f"The queue at {branch.name} has moved faster. Here are your updated times."],
+            rows=[("Token number", f"#{t.token_number}"),
+                  ("Updated waiting time", f"{t.expected_waiting_time or 0} mins"),
+                  ("Updated start time", start)],
+            button_color="#198754",
         )
 
     messages.success(request, f"Token {token.token_number} marked as no-show and waiting customers notified.")
@@ -802,20 +786,10 @@ def shop_dashboard(request, id):
         
     user = request.user
     
-    # Enforce that saloon admins/staff can only see their own branch, but allow superusers to see any
-    if user.is_superuser:
-        branch_to_use = branch
-    else:
-        try:
-            profile = user.user_profile
-            user_branch = profile.branch
-            if not user_branch or user_branch.id != branch.id:
-                messages.error(request, "Access denied. You do not have permission for this branch.")
-                return redirect("customer_home")
-            branch_to_use = user_branch
-        except UserProfile.DoesNotExist:
-            messages.error(request, "Access denied. User profile not found.")
-            return redirect("customer_home")
+    # Branch staff/admin of this branch, the organization owner, or a superuser
+    if not can_manage_branch(user, branch.id):
+        return deny(request)
+    branch_to_use = branch
             
     if not branch_to_use.is_open:
         _set_branch_open(branch_to_use)
@@ -856,6 +830,8 @@ def shop_dashboard(request, id):
         
     context = {
         "branch_id": id,
+        "branch": branch_to_use,
+        "can_setup": can_manage_branch(user, branch_to_use.id, ("branch_admin",)),
         "token_data": token_data,
         "total_waiting": total_waiting,
         "total_in_progress": total_in_progress,

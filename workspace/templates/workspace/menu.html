@@ -1,0 +1,50 @@
+{% extends "workspace/_layout.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Menu - {{ branch.name }}{% endblock %}
+{% block ws_title %}{{ branch.name }}{% endblock %}
+{% block ws_content %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card ws-card p-3">
+      <h5 class="fw-bold mb-3">Menu</h5>
+      {% for cat in categories %}
+        <div class="fw-bold text-uppercase small text-muted mt-3">{{ cat.name }}</div>
+        {% for item in cat.menu_items.all %}
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-bottom">
+          <div>
+            <div class="fw-semibold {% if not item.is_available %}text-muted text-decoration-line-through{% endif %}">
+              <span class="{% if item.is_veg %}text-success{% else %}text-danger{% endif %}">●</span> {{ item.name.name }}
+            </div>
+            <div class="small text-muted">₹{{ item.price }} &middot; {{ item.preparation_time_minutes }} min</div>
+          </div>
+          <div class="d-flex gap-2">
+            <a href="{% url 'workspace:menu_item_edit' branch.id item.id %}" class="btn btn-sm btn-outline-primary rounded-pill">Edit</a>
+            <form method="post" action="{% url 'workspace:menu_item_toggle' branch.id item.id %}">
+              {% csrf_token %}
+              <button class="btn btn-sm rounded-pill {% if item.is_available %}btn-outline-secondary{% else %}btn-success{% endif %}">
+                {% if item.is_available %}Sold out{% else %}Available{% endif %}
+              </button>
+            </form>
+          </div>
+        </div>
+        {% empty %}<div class="small text-muted py-2">No items in this section.</div>{% endfor %}
+      {% empty %}
+      <p class="text-muted mb-0">No menu yet. Add your first item.</p>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card ws-card p-3">
+      <h5 class="fw-bold mb-3">Add a menu item</h5>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary rounded-pill px-4 w-100">Save item</button>
+      </form>
+      <p class="small text-muted mt-2 mb-0">Pick a section and item name from the list, or type new ones.</p>
+    </div>
+  </div>
+</div>
+<datalist id="menu-categories">{% for n in category_names %}<option value="{{ n }}">{% endfor %}</datalist>
+<datalist id="menu-items">{% for n in item_names %}<option value="{{ n }}">{% endfor %}</datalist>
+{% endblock %}

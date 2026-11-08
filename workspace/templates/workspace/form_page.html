@@ -1,0 +1,38 @@
+{% extends "workspace/_layout.html" %}
+{% load crispy_forms_tags %}
+{% block title %}{{ title }} - Business Workspace{% endblock %}
+{% block ws_title %}{{ title }}{% endblock %}
+{% block ws_content %}
+<div class="card ws-card p-3 p-md-4" style="max-width: 720px;">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form|crispy }}
+    <div class="d-flex flex-wrap gap-2">
+      <button type="submit" class="btn btn-primary rounded-pill px-4">Save</button>
+      {% if back_url %}<a href="{% url back_url %}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>{% endif %}
+    </div>
+  </form>
+</div>
+{% if menu_datalists %}
+<datalist id="menu-categories">{% for n in category_names %}<option value="{{ n }}">{% endfor %}</datalist>
+<datalist id="menu-items">{% for n in item_names %}<option value="{{ n }}">{% endfor %}</datalist>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+{% if service_name_toggle %}
+<script>
+  // Show the "New service name" box only when "+ Add a new service name" is selected
+  (function () {
+    var select = document.getElementById('id_service_choice');
+    var box = document.getElementById('div_id_new_service_name');
+    function toggle() {
+      if (!select || !box) return;
+      var isNew = select.value === 'new';
+      box.style.display = isNew ? '' : 'none';
+      if (isNew) { var input = box.querySelector('input'); if (input) input.focus(); }
+    }
+    if (select) { select.addEventListener('change', toggle); toggle(); }
+  })();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,8 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
 <head>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/services.css' %}">
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col-12">
@@ -11,6 +13,7 @@
                     <li class="breadcrumb-item"><a href="{% url 'customer_dashboard' %}" class="text-decoration-none">Categories</a></li>
                     <li class="breadcrumb-item active">Service Menu</li>
                 </ol>
+                {% include "reviews/_branch_rating.html" with b=branch %}
                 
                 <div class="d-flex flex-wrap gap-2">
                     <button class='est-wait-badge' 
@@ -41,6 +44,10 @@
                     {% endif %}
                 </div>
             </nav>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+                {% include "organization/_branch_social.html" with b=branch %}
+                {% include "organization/_share_buttons.html" with share_text="Book at "|add:branch.name|add:" on QuickQueue" %}
+            </div>
 
             <h2 class="fw-bold mt-4">Menu: <span class="text-primary">{{ branch }}</span></h2>
             <p class="text-muted">Select the services you'd like to book today.</p>
@@ -79,20 +86,16 @@
         </td>
         
         <td class="text-center" style="width: 60px;">
-            <div class="rounded-3 bg-light d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
-                <i class="bi 
-                    {% if 'Hair Cut' in service.name or 'Trim' in service.name %}bi-scissors text-primary
-                    {% elif 'Color' in service.name %}bi-brush text-primary
-                    {% elif 'Wash' in service.name %}bi-droplet-half text-info
-                    {% else %}bi-card-list text-muted{% endif %}" 
-                    style="font-size: 1.4rem;"></i>
-            </div>
+            <span class="svc-chip svc-{{ service.name.icon_group|default:'other' }}" aria-hidden="true">
+                <i class="bi {{ service.name.icon|default:'bi-bookmark-star' }}"></i>
+            </span>
         </td>
 
         <td>
             <label class="fw-bold d-block text-dark mb-0" for="service_{{ service.id }}" style="cursor: pointer;">
                 {{ service.name }}
             </label>
+            {% if service.description %}<div class="small text-muted mb-1">{{ service.description }}</div>{% endif %}
             <small class="text-muted">
                 <i class="bi bi-clock small"></i> {{ service.average_time_minutes }} mins average
             </small>

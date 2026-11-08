@@ -1,0 +1,8 @@
+{# Branch rating badge. Pass the branch as "b". Uses the stored rating_avg and rating_count. #}
+{% if b.rating_count %}
+<a href="{% url 'reviews:branch_reviews' b.id %}" class="badge rounded-pill bg-warning-subtle text-dark border border-warning text-decoration-none">
+  ★ {{ b.rating_avg|floatformat:1 }} <span class="text-muted">({{ b.rating_count }})</span>
+</a>
+{% else %}
+<span class="badge rounded-pill bg-light text-muted border">New</span>
+{% endif %}

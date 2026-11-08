@@ -1,0 +1,55 @@
+{# Search / filter form for branch lists. Needs: cities, localities, landmarks, pin_codes, match_note, is_search #}
+<form method="GET" action="" class="card border-0 shadow-sm rounded-4 p-3 mb-3" id="branch-search-form">
+  <div class="row g-2 align-items-end">
+    <div class="col-12 col-md-4">
+      <label class="form-label small fw-bold mb-1" for="criteria-select">Search by</label>
+      <select name="criteria" id="criteria-select" class="form-select">
+        <option value="text" {% if request.GET.criteria == 'text' or not request.GET.criteria %}selected{% endif %}>Name, area or PIN (type)</option>
+        <option value="city" {% if request.GET.criteria == 'city' %}selected{% endif %}>City</option>
+        <option value="locality" {% if request.GET.criteria == 'locality' %}selected{% endif %}>Area / locality</option>
+        <option value="landmark" {% if request.GET.criteria == 'landmark' %}selected{% endif %}>Landmark</option>
+        <option value="pin_code" {% if request.GET.criteria == 'pin_code' %}selected{% endif %}>PIN code</option>
+      </select>
+    </div>
+
+    <div class="col-12 col-md-5 criteria-value-field" id="field-text">
+      <label class="form-label small fw-bold mb-1">Search</label>
+      <input type="text" name="q" class="form-control" placeholder="e.g. salon name, Sector 62, 110001" value="{{ request.GET.q }}">
+    </div>
+    {% for key, label, values in filter_lists %}
+    <div class="col-12 col-md-5 criteria-value-field" id="field-{{ key }}" style="display:none;">
+      <label class="form-label small fw-bold mb-1">Choose {{ label|lower }}</label>
+      <select class="form-select" id="select-{{ key }}">
+        <option value="">-- Choose {{ label|lower }} --</option>
+        {% for v in values %}<option value="{{ v }}" {% if request.GET.selected_val == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endfor %}
+
+    <div class="col-12 col-md-3 d-flex gap-2">
+      <button type="submit" class="btn btn-primary flex-fill">Search</button>
+      {% if is_search %}<a href="?" class="btn btn-outline-secondary" title="Back to near me">Near me</a>{% endif %}
+    </div>
+  </div>
+</form>
+{% if match_note %}<div class="small text-muted mb-3"><i class="bi bi-geo-alt"></i> {{ match_note }}</div>{% endif %}
+
+<script>
+  (function () {
+    var criteria = document.getElementById('criteria-select');
+    if (!criteria) return;
+    var keys = ['text', 'city', 'locality', 'landmark', 'pin_code'];
+    function update() {
+      keys.forEach(function (k) {
+        var box = document.getElementById('field-' + k);
+        if (box) box.style.display = (criteria.value === k) ? '' : 'none';
+        var sel = document.getElementById('select-' + k);
+        if (sel) { if (criteria.value === k) sel.setAttribute('name', 'selected_val'); else sel.removeAttribute('name'); }
+      });
+      var q = document.querySelector('#field-text input');
+      if (q) { if (criteria.value === 'text') q.setAttribute('name', 'q'); else q.removeAttribute('name'); }
+    }
+    criteria.addEventListener('change', update);
+    update();
+  })();
+</script>

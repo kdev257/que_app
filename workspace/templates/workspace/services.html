@@ -1,0 +1,130 @@
+{% extends "workspace/_layout.html" %}
+{% load static crispy_forms_tags %}
+{% block title %}Services - {{ branch.name }}{% endblock %}
+{% block ws_css %}<link rel="stylesheet" href="{% static 'css/services.css' %}">{% endblock %}
+{% block ws_title %}{{ branch.name }}{% endblock %}
+{% block ws_content %}
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-3">
+      <h4 class="fw-bold mb-0">Rate card</h4>
+      <span class="text-muted small">
+        {{ active_count }} live for customers{% if hidden_count %}, {{ hidden_count }} hidden{% endif %}
+      </span>
+    </div>
+
+    <div class="row g-3">
+      {% for s in services %}
+      <div class="col-sm-6">
+        <article class="svc-tile svc-{{ s.name.icon_group|default:'other' }}{% if not s.is_active %} is-hidden{% endif %}">
+          <div class="d-flex gap-3">
+            <span class="svc-chip" aria-hidden="true"><i class="bi {{ s.name.icon|default:'bi-bookmark-star' }}"></i></span>
+            <div class="flex-grow-1" style="min-width: 0;">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <h5 class="svc-name">{{ s.name }}</h5>
+                <span class="svc-price">₹{{ s.price|floatformat:"-2" }}</span>
+              </div>
+              <div class="svc-meta">
+                <i class="bi bi-clock"></i> {{ s.average_time_minutes }} min
+                {% if not s.is_active %}<span class="badge rounded-pill text-bg-secondary ms-1">Hidden</span>{% endif %}
+              </div>
+              {% if s.description %}<p class="svc-desc">{{ s.description|truncatechars:90 }}</p>{% endif %}
+            </div>
+          </div>
+          <div class="svc-actions">
+            <a href="{% url 'workspace:service_edit' branch.id s.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3"><i class="bi bi-pencil"></i> Edit</a>
+            <form method="post" action="{% url 'workspace:service_toggle' branch.id s.id %}" class="ms-auto">
+              {% csrf_token %}
+              {% if s.is_active %}
+              <button class="btn btn-sm btn-link text-secondary text-decoration-none"><i class="bi bi-eye-slash"></i> Hide</button>
+              {% else %}
+              <button class="btn btn-sm btn-success rounded-pill px-3"><i class="bi bi-eye"></i> Show to customers</button>
+              {% endif %}
+            </form>
+          </div>
+        </article>
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="card border-0 rounded-4 p-4 text-center">
+          <div class="d-flex justify-content-center gap-2 mb-3">
+            <span class="svc-chip svc-hair"><i class="bi bi-scissors"></i></span>
+            <span class="svc-chip svc-skin"><i class="bi bi-stars"></i></span>
+            <span class="svc-chip svc-spa"><i class="bi bi-flower1"></i></span>
+            <span class="svc-chip svc-nails"><i class="bi bi-hand-index-thumb"></i></span>
+          </div>
+          <h5 class="fw-bold">Your rate card is empty</h5>
+          <p class="text-muted mb-0">Add your first service with the form. Customers see it as soon as your branch is approved.</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% if services %}<p class="small text-muted mt-3 mb-0">Hidden services are not shown to customers. Past bookings and invoices are not affected.</p>{% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm svc-add svc-other p-3" id="svc-add-card">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <span class="svc-chip" id="svc-preview" aria-hidden="true"><i class="bi bi-bookmark-star"></i></span>
+        <div>
+          <h5 class="fw-bold mb-0">Add a service</h5>
+          <div class="small text-muted" id="svc-preview-label">The icon is picked from the name</div>
+        </div>
+      </div>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary rounded-pill px-4 w-100">Add service</button>
+      </form>
+      <p class="small text-muted mt-2 mb-3">Not in the list? Choose "+ Add a new service name" at the bottom.</p>
+      <div class="svc-legend">
+        {% for key, label in icon_groups %}{% if key != 'other' %}<span class="svc-{{ key }}">{{ label }}</span>{% endif %}{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{{ name_styles|json_script:"svc-name-styles" }}
+{{ icon_rules|json_script:"svc-icon-rules" }}
+{% endblock %}
+{% block extra_js %}
+<script>
+  (function () {
+    var select = document.getElementById('id_service_choice');
+    var box = document.getElementById('div_id_new_service_name');
+    var newInput = document.getElementById('id_new_service_name');
+    var card = document.getElementById('svc-add-card');
+    var chip = document.getElementById('svc-preview');
+    var label = document.getElementById('svc-preview-label');
+    var styles = JSON.parse(document.getElementById('svc-name-styles').textContent);
+    var rules = JSON.parse(document.getElementById('svc-icon-rules').textContent);
+    var groups = {};
+    document.querySelectorAll('.svc-legend span').forEach(function (s) { groups[s.className.replace('svc-', '')] = s.textContent; });
+
+    function guess(name) {   // same rules as the server, for names typed as new
+      var t = (name || '').toLowerCase();
+      for (var i = 0; i < rules.length; i++) {
+        if (rules[i][0].some(function (k) { return t.indexOf(k) !== -1; })) return [rules[i][1], rules[i][2]];
+      }
+      return ['bi-bookmark-star', 'other'];
+    }
+    function show(style) {
+      Object.keys(groups).concat(['other']).forEach(function (g) { card.classList.remove('svc-' + g); });
+      card.classList.add('svc-' + style[1]);
+      chip.innerHTML = '<i class="bi ' + style[0] + '"></i>';
+      label.textContent = groups[style[1]] || 'The icon is picked from the name';
+      chip.classList.add('bump'); setTimeout(function () { chip.classList.remove('bump'); }, 180);
+    }
+    function update() {
+      if (!select) return;
+      var isNew = select.value === 'new';
+      if (box) box.style.display = isNew ? '' : 'none';
+      if (isNew) show(guess(newInput && newInput.value));
+      else if (styles[select.value]) show(styles[select.value]);
+      else show(['bi-bookmark-star', 'other']);
+    }
+    if (select) select.addEventListener('change', function () { update(); if (select.value === 'new' && newInput) newInput.focus(); });
+    if (newInput) newInput.addEventListener('input', update);
+    update();
+  })();
+</script>
+{% endblock %}

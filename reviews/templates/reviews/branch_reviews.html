@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Reviews - {{ branch.name }}{% endblock %}
+{% block content %}
+<div class="mx-auto" style="max-width: 760px;">
+  <h3 class="fw-bold mb-1">{{ branch.name }}</h3>
+  <p class="mb-2">{% include "reviews/_branch_rating.html" with b=branch %}</p>
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    {% include "organization/_branch_social.html" with b=branch %}
+    {% include "organization/_share_buttons.html" with share_text=branch.name|add:" reviews on QuickQueue" %}
+  </div>
+  {% for r in reviews %}
+  <div class="card border-0 shadow-sm rounded-4 p-3 mb-3">
+    <div class="d-flex flex-wrap justify-content-between gap-2">
+      <span class="fw-semibold">{{ r.display_name }}</span>
+      <span class="text-warning">{{ r.stars }}</span>
+    </div>
+    <div class="small text-muted mb-1">{{ r.created_at|date:"d M Y" }}</div>
+    {% if r.tag_labels %}<div class="mb-1">{% for t in r.tag_labels %}<span class="badge bg-light text-dark border me-1">{{ t }}</span>{% endfor %}</div>{% endif %}
+    {% if r.comment %}<p class="mb-1">{{ r.comment }}</p>{% endif %}
+    {% if r.reply %}<div class="bg-light rounded-3 p-2 small mt-2"><b>Reply from {{ branch.name }}:</b> {{ r.reply }}</div>{% endif %}
+  </div>
+  {% empty %}
+  <p class="text-muted">No reviews yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     'restaurants',
     'billing',
     'privacy',
+    'reviews',
+    'workspace',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -84,6 +86,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'privacy.context_processors.data_protection',
+                'workspace.context_processors.workspace_nav',
             ],
         },
     },
@@ -166,6 +169,8 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@queueapp.com')
+# Full address of the website, used for links in emails (rating link, buttons)
+SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
 
 # ---------------------------------------------------------------------------
 # Data protection (India DPDP Act 2023 / DPDP Rules 2025)

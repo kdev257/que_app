@@ -19,4 +19,9 @@ SGST: Rs.{{ invoice.sgst_amount }}
 {% endif %}TOTAL: Rs.{{ invoice.total_amount }}
 Payment: {{ invoice.payment_status_display }}
 
-Thank you for using QuickQueue!
+{% if rate_url %}How was your visit? Rate it here (no login needed):
+{{ rate_url }}
+
+{% endif %}{% if invoice_url %}View or print online: {{ invoice_url }}
+
+{% endif %}Thank you for using QuickQueue!

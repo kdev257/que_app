@@ -1,0 +1,25 @@
+{% extends "workspace/_layout.html" %}
+{% block title %}Reviews - {{ branch.name }}{% endblock %}
+{% block ws_title %}{{ branch.name }}{% endblock %}
+{% block ws_content %}
+<div class="mb-3">{% include "reviews/_branch_rating.html" with b=branch %}</div>
+{% for r in reviews %}
+<div class="card ws-card p-3 mb-3 {% if r.is_hidden %}opacity-50{% endif %}">
+  <div class="d-flex flex-wrap justify-content-between gap-2">
+    <span class="fw-semibold">{{ r.display_name }} &middot; Token #{{ r.token.token_number }}</span>
+    <span class="text-warning">{{ r.stars }}</span>
+  </div>
+  <div class="small text-muted mb-1">{{ r.created_at|date:"d M Y, h:i A" }}{% if r.is_hidden %} &middot; hidden by QuickQueue{% endif %}</div>
+  {% if r.tag_labels %}<div class="mb-1">{% for t in r.tag_labels %}<span class="badge bg-light text-dark border me-1">{{ t }}</span>{% endfor %}</div>{% endif %}
+  {% if r.comment %}<p class="mb-2">{{ r.comment }}</p>{% endif %}
+  <form method="post" class="d-flex flex-column gap-2">
+    {% csrf_token %}
+    <input type="hidden" name="review_id" value="{{ r.id }}">
+    <textarea name="reply" rows="2" maxlength="1000" class="form-control" placeholder="Write a public reply">{{ r.reply }}</textarea>
+    <button class="btn btn-sm btn-outline-primary rounded-pill align-self-start px-3">{% if r.reply %}Update reply{% else %}Reply{% endif %}</button>
+  </form>
+</div>
+{% empty %}
+<p class="text-muted">No reviews yet. Customers can rate after their visit is completed.</p>
+{% endfor %}
+{% endblock %}

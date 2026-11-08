@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Rate your visit - QuickQueue{% endblock %}
+{% block extra_css %}
+<style>
+  .star-input { display: inline-flex; flex-direction: row-reverse; gap: 4px; }
+  .star-input input { display: none; }
+  .star-input label { font-size: 2.6rem; line-height: 1; color: #d0d4d9; cursor: pointer; padding: 0 2px; }
+  .star-input input:checked ~ label,
+  .star-input label:hover, .star-input label:hover ~ label { color: #f5b301; }
+  .tag-list { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .tag-list input { display: none; }
+  .tag-list label { border: 1px solid #ced4da; border-radius: 999px; padding: .4rem .9rem; cursor: pointer; background: #fff; }
+  .tag-list input:checked + label { background: #0d6efd; color: #fff; border-color: #0d6efd; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 mx-auto" style="max-width: 560px;">
+  <h3 class="fw-bold mb-1">Rate your visit</h3>
+  <p class="text-muted mb-4">{{ token.branch.name }} &middot; Token #{{ token.token_number }} &middot; {{ token.token_date|date:"d M Y" }}</p>
+
+  {% if form %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if request.GET.k %}<input type="hidden" name="k" value="{{ request.GET.k }}">{% endif %}
+    <div class="mb-3 text-center">
+      <div class="star-input">
+        {% for value, label in form.fields.rating.choices %}
+          <input type="radio" id="star{{ value }}" name="rating" value="{{ value }}"
+                 {% if form.rating.value|stringformat:"s" == value|stringformat:"s" %}checked{% endif %}>
+          <label for="star{{ value }}" title="{{ value }} star{{ value|pluralize }}">★</label>
+        {% endfor %}
+      </div>
+      {% if form.rating.errors %}<div class="text-danger small">{{ form.rating.errors.0 }}</div>{% endif %}
+    </div>
+
+    <div class="mb-3">
+      <div class="small fw-semibold mb-2">{{ form.tags.label }}</div>
+      <div class="tag-list">
+        {% for value, label in form.fields.tags.choices %}
+          <input type="checkbox" id="tag_{{ value }}" name="tags" value="{{ value }}"
+                 {% if value in form.tags.value %}checked{% endif %}>
+          <label for="tag_{{ value }}">{{ label }}</label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label small fw-semibold" for="id_comment">{{ form.comment.label }}</label>
+      {{ form.comment }}
+    </div>
+
+    <button type="submit" class="btn btn-primary rounded-pill px-4 w-100 py-2">{% if review %}Update rating{% else %}Submit rating{% endif %}</button>
+    <p class="small text-muted mt-3 mb-0">Your rating is shown as "{% if review %}{{ review.display_name }}{% else %}your first name and initial{% endif %}". You can change it for 7 days.</p>
+  </form>
+  {% else %}
+    <div class="fs-3 text-warning">{{ review.stars }}</div>
+    {% if review.comment %}<p class="mt-2">{{ review.comment }}</p>{% endif %}
+    <a href="{% url 'index' %}" class="btn btn-outline-secondary rounded-pill mt-3">Back</a>
+  {% endif %}
+</div>
+{% endblock %}

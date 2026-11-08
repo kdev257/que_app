@@ -103,6 +103,11 @@
                     </div>
 
                     <div class="d-grid gap-2">
+                        {% if token.status == 'completed' %}
+                        <a href="{% url 'reviews:rate_visit' token.id %}" class="btn btn-warning rounded-pill fw-semibold">
+                            {% if token.review %}<i class="bi bi-star-fill me-1"></i> Your rating: {{ token.review.stars }}{% else %}<i class="bi bi-star me-1"></i> Rate your visit{% endif %}
+                        </a>
+                        {% endif %}
                         {% if token.invoice %}
                         <a href="{% url 'billing:invoice_detail' token.invoice.id %}" class="btn btn-success rounded-pill fw-semibold">
                             <i class="bi bi-receipt me-1"></i> View Invoice

@@ -52,14 +52,11 @@ def log_processing(action, request=None, actor=None, subject_user=None, subject_
 
 
 def _send(subject, message, email):
+    """Send a privacy email as branded HTML (plain-text copy included). Never raises."""
     if not email:
         return False
-    try:
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
-        return True
-    except Exception:
-        logger.exception("Could not send data protection email")
-        return False
+    from core.emails import send_text_as_html
+    return send_text_as_html(subject, message, email)
 
 
 def dpo_contact_text():
@@ -190,6 +187,13 @@ def export_personal_data(user=None, guest=None):
          "created_at": str(r.created_at)}
         for r in requests
     ]
+    from reviews.models import Review
+    reviews_qs = Review.objects.filter(user=user) if user is not None else Review.objects.filter(guest=guest)
+    data["reviews"] = [
+        {"branch": r.branch.name, "rating": r.rating, "comment": r.comment, "shown_as": r.display_name,
+         "date": str(r.created_at)}
+        for r in reviews_qs.select_related("branch")
+    ]
     data["shared_with"] = [
         "The branch / restaurant you book with",
         "Razorpay (online payments)",
@@ -239,6 +243,13 @@ def schedule_erasure(request, user=None, guest=None):
     return req
 
 
+def _anonymise_reviews(user=None, guest=None):
+    """Keep the star rating (no personal data) but remove the name and comment."""
+    from reviews.models import Review
+    qs = Review.objects.filter(user=user) if user is not None else Review.objects.filter(guest=guest)
+    qs.update(display_name="Former customer", comment="")
+
+
 def anonymise_user(user, request=None):
     from billing.models import Invoice
     from queues.models import Cart
@@ -259,6 +270,7 @@ def anonymise_user(user, request=None):
         RestaurantOrder.objects.filter(token__user=user).update(delivery_address="")
         Invoice.objects.filter(customer_user=user).update(customer_email="", customer_phone="")
         Cart.objects.filter(user=user).delete()
+        _anonymise_reviews(user=user)
         DataRequest.objects.filter(user=user).update(contact_name="", contact_email="")
         ConsentRecord.objects.filter(user=user).update(ip_address=None, user_agent="")
         user.username = f"{DELETED_USER_PREFIX}{user.pk}"
@@ -280,6 +292,7 @@ def anonymise_guest(guest, request=None):
         RestaurantOrder.objects.filter(token__guest=guest).update(delivery_address="")
         Invoice.objects.filter(customer_guest=guest).update(customer_email="", customer_phone="")
         Cart.objects.filter(guest=guest).delete()
+        _anonymise_reviews(guest=guest)
         DataRequest.objects.filter(guest=guest).update(contact_name="", contact_email="")
         ConsentRecord.objects.filter(guest=guest).update(ip_address=None, user_agent="")
         guest.name = DELETED_GUEST_NAME

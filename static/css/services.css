@@ -1,0 +1,52 @@
+/* Service rate card: colour groups for service icons (stored on Service_Name.icon_group) */
+.svc-hair     { --svc: #2563eb; --svc-soft: #dbeafe; }
+.svc-skin     { --svc: #db2777; --svc-soft: #fce7f3; }
+.svc-nails    { --svc: #7c3aed; --svc-soft: #ede9fe; }
+.svc-spa      { --svc: #0d9488; --svc-soft: #ccfbf1; }
+.svc-grooming { --svc: #b45309; --svc-soft: #fef3c7; }
+.svc-makeup   { --svc: #c026d3; --svc-soft: #fae8ff; }
+.svc-health   { --svc: #059669; --svc-soft: #d1fae5; }
+.svc-other    { --svc: #475569; --svc-soft: #e2e8f0; }
+
+.svc-chip {
+  width: 48px; height: 48px; flex: 0 0 48px;
+  border-radius: 14px;
+  background: var(--svc-soft, #e2e8f0); color: var(--svc, #475569);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  transition: transform .18s ease;
+}
+.svc-chip.bump { transform: scale(1.12); }
+
+/* Workspace rate card tiles */
+.svc-tile {
+  background: #fff;
+  border-radius: 16px;
+  border-left: 6px solid var(--svc);
+  padding: 14px 14px 10px;
+  height: 100%;
+  display: flex; flex-direction: column;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .07);
+}
+.svc-name  { font-weight: 700; font-size: 1rem; margin: 0; color: #0f172a; overflow-wrap: anywhere; }
+.svc-price { font-weight: 800; font-size: 1.1rem; color: var(--svc); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.svc-meta  { font-size: .82rem; color: #64748b; }
+.svc-desc  { font-size: .86rem; color: #475569; margin: .35rem 0 0; }
+.svc-actions {
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+  margin-top: auto; padding-top: .6rem; border-top: 1px dashed #e2e8f0;
+}
+.svc-tile.is-hidden { background: #f8fafc; border-left-color: #cbd5e1; }
+.svc-tile.is-hidden .svc-chip { filter: grayscale(1); opacity: .55; }
+.svc-tile.is-hidden .svc-name,
+.svc-tile.is-hidden .svc-price { color: #94a3b8; }
+
+/* Add-service panel */
+.svc-add { border-top: 6px solid var(--svc, #2563eb); border-radius: 16px; }
+.svc-legend { display: flex; flex-wrap: wrap; gap: .35rem .9rem; font-size: .78rem; color: #64748b; }
+.svc-legend span::before {
+  content: ""; display: inline-block; width: .6rem; height: .6rem; border-radius: 50%;
+  background: var(--svc); margin-right: .3rem; vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) { .svc-chip { transition: none; } }

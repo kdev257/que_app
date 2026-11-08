@@ -1,0 +1,30 @@
+{# Share this page. Optional: share_text, btn_class. Uses the current page address. #}
+{% with url=request.build_absolute_uri text=share_text|default:"Book on QuickQueue" %}
+<div class="d-inline-flex flex-wrap gap-2 align-items-center qq-share" data-url="{{ url }}" data-text="{{ text }}">
+  <button type="button" class="btn btn-sm rounded-pill {{ btn_class|default:'btn-outline-secondary' }} qq-share-native d-none"><i class="bi bi-share"></i> Share</button>
+  <a href="https://wa.me/?text={{ text|urlencode }}%20{{ url|urlencode }}" target="_blank" rel="noopener" class="btn btn-sm rounded-pill {{ btn_class|default:'btn-outline-success' }}" title="Share on WhatsApp"><i class="bi bi-whatsapp"></i></a>
+  <a href="https://www.facebook.com/sharer/sharer.php?u={{ url|urlencode }}" target="_blank" rel="noopener" class="btn btn-sm rounded-pill {{ btn_class|default:'btn-outline-primary' }}" title="Share on Facebook"><i class="bi bi-facebook"></i></a>
+  <a href="https://twitter.com/intent/tweet?text={{ text|urlencode }}&url={{ url|urlencode }}" target="_blank" rel="noopener" class="btn btn-sm rounded-pill {{ btn_class|default:'btn-outline-dark' }}" title="Share on X"><i class="bi bi-twitter-x"></i></a>
+  <button type="button" class="btn btn-sm rounded-pill {{ btn_class|default:'btn-outline-secondary' }} qq-share-copy" title="Copy link"><i class="bi bi-link-45deg"></i> <span>Copy link</span></button>
+</div>
+{% endwith %}
+<script>
+  (function () {
+    document.querySelectorAll('.qq-share').forEach(function (box) {
+      if (box.dataset.ready) return; box.dataset.ready = '1';
+      var url = box.dataset.url, text = box.dataset.text;
+      var nativeBtn = box.querySelector('.qq-share-native');
+      if (navigator.share && nativeBtn) {   // phones: use the phone's own share sheet
+        nativeBtn.classList.remove('d-none');
+        nativeBtn.addEventListener('click', function () { navigator.share({ title: text, text: text, url: url }).catch(function () {}); });
+      }
+      var copyBtn = box.querySelector('.qq-share-copy');
+      if (copyBtn) copyBtn.addEventListener('click', function () {
+        var label = copyBtn.querySelector('span');
+        var done = function () { if (label) { label.textContent = 'Copied!'; setTimeout(function () { label.textContent = 'Copy link'; }, 2000); } };
+        if (navigator.clipboard) navigator.clipboard.writeText(url).then(done).catch(function () { window.prompt('Copy this link:', url); });
+        else window.prompt('Copy this link:', url);
+      });
+    });
+  })();
+</script>

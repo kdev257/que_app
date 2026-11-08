@@ -68,6 +68,11 @@
                                     <i class="bi bi-receipt"></i> Invoice
                                 </a>
                             {% endif %}
+                            {% if token.status == 'completed' %}
+                                <a href="{% url 'reviews:rate_visit' token.id %}" class="d-block small mt-1 text-decoration-none text-warning-emphasis">
+                                    {% if token.review %}{{ token.review.stars }}{% else %}<i class="bi bi-star"></i> Rate visit{% endif %}
+                                </a>
+                            {% endif %}
                         </td>
 
                         <td>
