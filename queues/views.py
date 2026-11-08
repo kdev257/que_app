@@ -51,30 +51,45 @@ def login_or_guest_required(view_func):
             return view_func(request, *args, **kwargs)
         if get_guest(request):
             return view_func(request, *args, **kwargs)
-        # Ask the visitor to log in or continue as guest, then come back here
+        # Ask the visitor to log in or continue as guest, then come back here.
+        # A form post (e.g. "Add to cart") can't be repeated, so return to the page it came from.
         from django.urls import reverse
-        from urllib.parse import urlencode
-        return redirect(f"{reverse('login_choice')}?{urlencode({'next': request.get_full_path()})}")
+        from urllib.parse import urlencode, urlparse
+        from django.utils.http import url_has_allowed_host_and_scheme
+        next_url = request.get_full_path()
+        if request.method != 'GET':
+            referer = request.META.get('HTTP_REFERER', '')
+            if referer and url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}):
+                parts = urlparse(referer)
+                next_url = parts.path + (f"?{parts.query}" if parts.query else "")
+            else:
+                next_url = reverse('index')
+        messages.info(request, "Please log in or continue as a guest to add items and book.")
+        return redirect(f"{reverse('login_choice')}?{urlencode({'next': next_url})}")
     return _wrapped
 
 
 def customer_required(view_func):
     """
-    Decorator for views that checks if the logged-in user is NOT a branch admin.
-    If they are, redirect them to their shop dashboard.
+    Customer pages (browse, cart, booking, ordering) are for customers and guests only.
+    Business accounts (owner, branch admin, staff) are sent to their own dashboard,
+    so they cannot book or order by mistake (e.g. after scanning their own QR code).
     """
     @wraps(view_func)
     def _wrapped(request, *args, **kwargs):
-        if request.user.is_authenticated:
-            try:
-                profile = request.user.user_profile
-                if profile.role == 'branch_admin':
-                    messages.error(request, "Access denied. Branch admins cannot access customer pages.")
-                    if profile.branch:
-                        return redirect('shop_dashboard', id=profile.branch.id)
-                    return redirect('user_profile')
-            except UserProfile.DoesNotExist:
-                pass
+        if request.user.is_authenticated and not request.user.is_superuser:
+            from django.urls import reverse
+            from organization.permissions import BUSINESS_ROLES, get_user_profile, home_url_for
+            profile = get_user_profile(request.user)
+            if profile is not None and profile.role in BUSINESS_ROLES:
+                target = home_url_for(request.user)
+                if target not in (request.path, reverse('index')):  # no loop for staff without a branch
+                    messages.warning(
+                        request,
+                        f"You are logged in as a business account ({request.user.username}). "
+                        "To book or order as a customer, please log out first.",
+                    )
+                    return redirect(target)
         return view_func(request, *args, **kwargs)
     return _wrapped
 
@@ -87,8 +102,7 @@ def service_category(request):
     return redirect('customer_dashboard')
 
 @customer_required
-@login_or_guest_required
-def service_list(request, service_category_id):
+def service_list(request, service_category_id):  # open to all; login is asked at "Add to cart"
     """
     Shows all services available for a category, filtered by user/guest location.
     """
@@ -118,8 +132,7 @@ def service_list(request, service_category_id):
     })
 
 @customer_required
-@login_or_guest_required
-def branch_services(request, branch_id):
+def branch_services(request, branch_id):  # open to all (QR scans, shared links); login at "Add to cart"
     # 1. Use get_object_or_404 to prevent crashes if branch_id is invalid
     branch = get_object_or_404(Branch, id=branch_id)
     if not branch.is_approved and not can_manage_branch(request.user, branch.id):

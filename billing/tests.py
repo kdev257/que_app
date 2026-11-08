@@ -226,5 +226,4 @@ class SecurityAndNumberingTests(TestCase):
         from organization.models import Service_Category
         cat = Service_Category.objects.create(name="Grooming")
         response = self.client.get(reverse("services_list", args=[cat.id]))
-        self.assertEqual(response.status_code, 302)
-        self.assertIn(reverse("login_choice"), response.url)
+        self.assertEqual(response.status_code, 200)  # browsing is open; login is asked at "Add to cart"

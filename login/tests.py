@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from django.test import TestCase
 from django.urls import reverse
 
@@ -69,3 +71,34 @@ class LoginLandingTests(TestCase):
     def test_business_user_ignores_next_to_services_page(self):
         self.make("ba2", "branch_admin", branch=self.salon)
         self.assertLands("ba2", reverse("shop_dashboard", args=[self.salon.id]), next_url="/")
+
+
+class BrowseWithoutLoginTests(TestCase):
+    """Visitors can view shops and menus; login / guest is asked only when adding to the cart."""
+
+    def setUp(self):
+        org = Organization.objects.create(name="Org", email="o@t.com", phone="1")
+        self.salon = Branch.objects.create(name="Salon", organization=org, is_approved=True,
+                                           services_category=Service_Category.objects.create(name="Salon"))
+        self.rest = Branch.objects.create(name="Dhaba", organization=org, is_approved=True,
+                                          services_category=Service_Category.objects.create(name="Restaurant"))
+
+    def test_visitor_can_view_salon_services(self):
+        response = self.client.get(reverse("branch_services", args=[self.salon.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Browse freely")
+
+    def test_visitor_can_view_restaurant_menu_and_search(self):
+        self.assertEqual(self.client.get(reverse("restaurants:menu_view", args=[self.rest.id])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("restaurants:restaurant_search")).status_code, 200)
+
+    def test_add_to_cart_asks_login_and_returns_to_same_page(self):
+        page = reverse("branch_services", args=[self.salon.id])
+        response = self.client.post(reverse("add_to_cart"), {}, HTTP_REFERER=f"http://testserver{page}")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login_choice"), response.url)
+        self.assertIn(quote(page, safe=""), response.url)
+
+    def test_add_to_order_cart_asks_login(self):
+        response = self.client.post(reverse("restaurants:add_to_order_cart"), {})
+        self.assertIn(reverse("login_choice"), response.url)

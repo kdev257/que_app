@@ -44,8 +44,8 @@ class WorkspaceTests(TestCase):
 
     def test_owner_sees_workspace_link_and_home(self):
         self.client.login(username="owner", password="pass")
-        response = self.client.get(reverse("index"))
-        self.assertContains(response, "Business Workspace")
+        response = self.client.get(reverse("index"))  # business accounts are sent to their workspace
+        self.assertRedirects(response, reverse("workspace:home"), fetch_redirect_response=False)
         response = self.client.get(reverse("workspace:home"))
         self.assertContains(response, "Main")
         self.assertNotContains(response, "Theirs")
@@ -116,6 +116,16 @@ class WorkspaceTests(TestCase):
         })
         item = MenuItem.objects.get(category__branch=rest)
         self.assertEqual(item.name.name, "Paneer Tikka")
+
+    def test_owner_cannot_book_at_customer_pages(self):
+        self.client.login(username="owner", password="pass")
+        response = self.client.get(reverse("branch_services", args=[self.branch.id]))
+        self.assertRedirects(response, reverse("workspace:home"), fetch_redirect_response=False)
+        staff = User.objects.create_user(username="stf", password="pass")
+        UserProfile.objects.create(user=staff, role="staff", branch=self.branch)
+        self.client.login(username="stf", password="pass")
+        response = self.client.get(reverse("branch_services", args=[self.branch.id]))
+        self.assertRedirects(response, reverse("shop_dashboard", args=[self.branch.id]), fetch_redirect_response=False)
 
     def test_unapproved_branch_hidden_from_customers(self):
         self.client.logout()

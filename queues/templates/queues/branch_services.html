@@ -51,6 +51,9 @@
 
             <h2 class="fw-bold mt-4">Menu: <span class="text-primary">{{ branch }}</span></h2>
             <p class="text-muted">Select the services you'd like to book today.</p>
+            {% if not user.is_authenticated and not request.session.guest_id %}
+            <p class="small text-muted mb-0"><i class="bi bi-info-circle me-1"></i>Browse freely. You'll be asked to log in or continue as a guest when you add a service.</p>
+            {% endif %}
         </div>
     </div>
 </div>

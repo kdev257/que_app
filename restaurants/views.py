@@ -83,8 +83,7 @@ def search_highway_restaurants(highway_id, current_km, direction, range_km=Decim
 
 
 @customer_required
-@login_or_guest_required
-def restaurant_search(request):
+def restaurant_search(request):  # open to all; login is asked at "Add to cart"
     request.session['current_workflow'] = 'restaurant'
     search_type = request.GET.get('search_type', 'urban')
     branches = []
@@ -227,8 +226,7 @@ def store_final_price(order):
 # Menu & Cart Views
 # ---------------------------------------------------------------------------
 @customer_required
-@login_or_guest_required
-def menu_view(request, branch_id):
+def menu_view(request, branch_id):  # open to all (table QR scans); login is asked at "Add to cart"
     branch = get_object_or_404(Branch, id=branch_id)
     if not branch.is_approved and not can_manage_branch(request.user, branch.id):
         raise Http404("Restaurant not found")

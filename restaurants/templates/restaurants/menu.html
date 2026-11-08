@@ -79,6 +79,9 @@
             {% endif %}
         </div>
 
+        {% if not user.is_authenticated and not request.session.guest_id %}
+        <p class="small text-muted mb-3"><i class="bi bi-info-circle me-1"></i>Browse the menu freely. You'll be asked to log in or continue as a guest when you add an item.</p>
+        {% endif %}
         {% if qr_table %}
         <div class="alert alert-success d-flex align-items-center gap-2 rounded-4 mb-4">
             <i class="bi bi-qr-code-scan fs-4"></i>
