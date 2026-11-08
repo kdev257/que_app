@@ -8,11 +8,12 @@ from django.contrib.auth.views import (
     PasswordResetConfirmView, 
     PasswordResetCompleteView
 )
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from .forms import Registrationform, CustomAuthenticationForm, UserProfileForm, guest_login_form
 from .models import UserProfile
 from django.utils.http import url_has_allowed_host_and_scheme
 from privacy.services import record_consent, log_processing
+from organization.permissions import BUSINESS_ROLES, get_user_profile, home_url_for
 
 
 def _safe_next(request):
@@ -58,28 +59,14 @@ def user_login(request):
                 login(request, user)
                 messages.success(request, f'Welcome back, {user.username}!')
                 
+                # Follow ?next= (e.g. a page that asked them to log in), except the plain
+                # services page for business users - they should land on their own dashboard.
                 next_url = _safe_next(request)
-                if next_url:
+                profile = get_user_profile(user)
+                is_business = user.is_superuser or user.is_staff or (profile is not None and profile.role in BUSINESS_ROLES)
+                if next_url and not (is_business and next_url.split('?')[0] in ('/', reverse('index'))):
                     return redirect(next_url)
-                
-                # Use try-except or a safer query to prevent crashes
-                try:
-                    user_profile = user.user_profile # Assumes related_name='user_profile'
-                    if user_profile.role == 'customer':
-                        return redirect('customer_dashboard')
-                    elif user_profile.role == 'org_admin':
-                        return redirect('workspace:home')
-                    elif user_profile.role == 'branch_admin':
-                        if user_profile.branch_id:
-                            return redirect('shop_dashboard', id=user_profile.branch_id)
-                        return redirect('workspace:home')
-                    elif user_profile.role == 'staff' and user_profile.branch_id:
-                        return redirect('restaurants:staff_dashboard', branch_id=user_profile.branch_id)
-                    elif user.is_staff:
-                        return redirect('admin:index')
-                    return redirect('index')
-                except UserProfile.DoesNotExist:
-                    return redirect('user_profile')
+                return redirect(home_url_for(user))
             else:
                 messages.error(request, 'Invalid username or password.')
     else:

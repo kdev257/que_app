@@ -77,7 +77,8 @@ def home(request):
     if not has_workspace(request.user):
         profile = get_user_profile(request.user)
         if profile and profile.role == "staff" and profile.branch_id:
-            return redirect("shop_dashboard", id=profile.branch_id)
+            from organization.permissions import home_url_for
+            return redirect(home_url_for(request.user))  # restaurant staff -> staff screen, salon staff -> shop
         messages.info(request, "The Business Workspace is for business owners. Register your business to get started.")
         return redirect("index")
 

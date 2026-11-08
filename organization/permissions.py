@@ -69,6 +69,48 @@ def workspace_branches(user):
     return Branch.objects.none()
 
 
+BUSINESS_ROLES = ("org_admin", "branch_admin", "staff")
+
+
+def is_restaurant_branch(branch):
+    return bool(branch and branch.services_category_id and branch.services_category.name.lower() == "restaurant")
+
+
+def home_url_for(user):
+    """
+    Where a user lands after login (one place for the rule):
+      org_admin (owner)        -> Business Workspace
+      branch_admin             -> their branch dashboard (kitchen for restaurants, shop for salons);
+                                  workspace if no branch is linked yet
+      staff                    -> their branch staff screen (restaurant staff screen or shop dashboard)
+      superuser / site staff   -> Django admin
+      no profile               -> profile page
+      customer / anyone else   -> services page
+    """
+    from django.urls import reverse
+    profile = get_user_profile(user)
+    role = profile.role if profile else None
+    branch = profile.branch if profile and profile.branch_id else None
+
+    if role == "org_admin":
+        return reverse("workspace:home")
+    if role == "branch_admin":
+        if branch is None:
+            return reverse("workspace:home")
+        if is_restaurant_branch(branch):
+            return reverse("restaurants:kitchen_dashboard", args=[branch.id])
+        return reverse("shop_dashboard", args=[branch.id])
+    if role == "staff" and branch is not None:
+        if is_restaurant_branch(branch):
+            return reverse("restaurants:staff_dashboard", args=[branch.id])
+        return reverse("shop_dashboard", args=[branch.id])
+    if user.is_superuser or user.is_staff:
+        return reverse("admin:index")
+    if profile is None:
+        return reverse("user_profile")
+    return reverse("index")
+
+
 def deny(request, message="Access denied. You do not have permission for this branch."):
     messages.error(request, message)
     return redirect("index")
