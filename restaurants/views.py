@@ -187,6 +187,42 @@ def restaurant_search(request):
     return render(request, 'restaurants/restaurant_search.html', context)
 
 
+QR_TABLE_HOURS = 4  # a scanned table stays selected for this long
+
+
+def remember_qr_table(request, branch, table_param):
+    """Store the table from a table QR code (?table=<id>) in the session."""
+    if not table_param or not str(table_param).isdigit():
+        return
+    table = Table.objects.filter(id=int(table_param), branch=branch, is_active=True).first()
+    if table:
+        request.session['qr_table'] = {'branch': branch.id, 'table': table.id, 'at': timezone.now().timestamp()}
+
+
+def get_qr_table(request, branch):
+    """The table this customer scanned at this restaurant (within the last few hours), or None."""
+    data = request.session.get('qr_table')
+    if not data or data.get('branch') != branch.id:
+        return None
+    if timezone.now().timestamp() - data.get('at', 0) > QR_TABLE_HOURS * 3600:
+        request.session.pop('qr_table', None)
+        return None
+    return Table.objects.filter(id=data.get('table'), branch=branch, is_active=True).first()
+
+
+def store_final_price(order):
+    """Save the bill (items + booking fee) on the token, so pages and staff read it from the database."""
+    from accounts.models import PlatformFee
+    subtotal = sum((item.price * item.quantity for item in order.items.all()), Decimal('0.00'))
+    booking_fee = Decimal('0.00')
+    active_fee_obj = PlatformFee.objects.filter(is_active=True).first()
+    if active_fee_obj and active_fee_obj.is_currently_active():
+        booking_fee = active_fee_obj.fee_logged_in if order.token.user else active_fee_obj.fee_guest
+    order.token.final_price = subtotal + booking_fee
+    order.token.booking_fee = booking_fee
+    order.token.save()
+
+
 # ---------------------------------------------------------------------------
 # Menu & Cart Views
 # ---------------------------------------------------------------------------
@@ -196,6 +232,8 @@ def menu_view(request, branch_id):
     branch = get_object_or_404(Branch, id=branch_id)
     if not branch.is_approved and not can_manage_branch(request.user, branch.id):
         raise Http404("Restaurant not found")
+    # Scanned a table QR code? Remember the table for checkout
+    remember_qr_table(request, branch, request.GET.get('table'))
     categories = MenuCategory.objects.filter(branch=branch).prefetch_related('menu_items')
     
     # Get session cart
@@ -211,6 +249,7 @@ def menu_view(request, branch_id):
         'branch': branch,
         'categories': categories,
         'cart_count': cart_count,
+        'qr_table': get_qr_table(request, branch),
     }
     return render(request, 'restaurants/menu.html', context)
 
@@ -324,7 +363,10 @@ def checkout_order(request, cart_id=None):
         return redirect('restaurants:restaurant_search')
         
     branch = get_object_or_404(Branch, id=branch_id)
-    tables = Table.objects.filter(branch=branch, is_active=True, is_occupied=False)
+    tables = list(Table.objects.filter(branch=branch, is_active=True, is_occupied=False).order_by('table_number'))
+    qr_table = get_qr_table(request, branch)  # table from a scanned table QR code
+    if qr_table and qr_table not in tables:
+        tables.insert(0, qr_table)  # the party is sitting there, so always offer it
     
     is_delivery_available = not hasattr(branch, 'highway_info') and branch.offers_delivery
     if request.method == "POST":
@@ -332,8 +374,12 @@ def checkout_order(request, cart_id=None):
         if order_type == 'delivery' and not is_delivery_available:
             messages.error(request, "Delivery is not available for this restaurant.")
             return redirect('restaurants:checkout_order')
-        table_id = request.POST.get('table')
+        table_id = request.POST.get('table') or (str(qr_table.id) if qr_table else None)
         minutes_str = request.POST.get('minutes_until_arrival', '').strip()
+        # Guest scanned a table QR and is already seated: no waiter, no kitchen "Accept" step.
+        at_qr_table = bool(qr_table) and order_type == 'dine_in' and str(table_id) == str(qr_table.id)
+        if at_qr_table:
+            minutes_str = ''
         
         # Delivery Address and Payment Options
         delivery_address = None
@@ -343,6 +389,8 @@ def checkout_order(request, cart_id=None):
             payment_option = request.POST.get('payment_option', 'online')
             if payment_option == 'pay_at_home':
                 payment_status_val = 'pay_at_home'
+        elif at_qr_table and request.POST.get('table_payment') == 'pay_later':
+            payment_status_val = 'pay_at_shop'  # pay at the table / counter after eating
         
         # Capture current user / guest information
         user_obj = request.user if request.user.is_authenticated else None
@@ -396,7 +444,7 @@ def checkout_order(request, cart_id=None):
             selected_table = None
             if order_type == 'dine_in':
                 if table_id:
-                    selected_table = get_object_or_404(Table, id=table_id)
+                    selected_table = get_object_or_404(Table, id=table_id, branch=branch, is_active=True)
                 else:
                     # Auto-allocate first available table
                     selected_table = Table.objects.filter(branch=branch, is_active=True, is_occupied=False).first()
@@ -405,8 +453,12 @@ def checkout_order(request, cart_id=None):
                     selected_table.is_occupied = True
                     selected_table.save()
                 
-            # Set initial order status to pending_confirmation for manual confirmation flow
-            order_status_val = 'pending_confirmation'
+            # Normal pre-orders wait for the kitchen to accept.
+            # Table-QR orders skip that: pay later -> cook now; pay online -> pay now, then cook.
+            if at_qr_table:
+                order_status_val = 'preparing' if payment_status_val == 'pay_at_shop' else 'tentative'
+            else:
+                order_status_val = 'pending_confirmation'
             
             rest_order = RestaurantOrder.objects.create(
                 token=token,
@@ -417,7 +469,7 @@ def checkout_order(request, cart_id=None):
                 estimated_prep_time_minutes=total_prep_time,
                 minutes_until_arrival=minutes_until_arrival,
                 delivery_address=delivery_address,
-                customer_arrived=(order_type == 'delivery')
+                customer_arrived=(order_type == 'delivery' or at_qr_table)
             )
             
             # Step 3: Populate order items
@@ -436,6 +488,17 @@ def checkout_order(request, cart_id=None):
             if 'restaurant_cart_branch_id' in request.session:
                 del request.session['restaurant_cart_branch_id']
                 
+            if at_qr_table:
+                if order_status_val == 'preparing':
+                    store_final_price(rest_order)
+                    token.status = 'in_progress'
+                    token.save()
+                    messages.success(request, "Order sent to the kitchen! Pay at the table after your meal.")
+                else:
+                    messages.success(request, "Order received! Please pay now and the kitchen will start cooking.")
+                send_new_order_kitchen_email(rest_order)
+                return redirect('restaurants:order_status', order_id=rest_order.id)
+
             messages.success(request, "Pre-order placed! Waiting for kitchen to accept your order.")
 
             # Email notifications (fail-safe — never breaks order flow)
@@ -471,6 +534,7 @@ def checkout_order(request, cart_id=None):
         'subtotal': subtotal,
         'is_delivery_available': is_delivery_available,
         'user_address': user_address,
+        'qr_table': qr_table,
     }
     return render(request, 'restaurants/checkout.html', context)
 
@@ -750,19 +814,7 @@ def accept_order(request, order_id):
                 order.customer_arrived = True
             messages.success(request, f"Order #{order.id} accepted. Preparing order...")
             
-            # Compute and store final price
-            subtotal = sum(item.price * item.quantity for item in order.items.all())
-            from accounts.models import PlatformFee
-            active_fee_obj = PlatformFee.objects.filter(is_active=True).first()
-            booking_fee = Decimal('0.00')
-            if active_fee_obj and active_fee_obj.is_currently_active():
-                if order.token.user:
-                    booking_fee = active_fee_obj.fee_logged_in
-                else:
-                    booking_fee = active_fee_obj.fee_guest
-            order.token.final_price = subtotal + booking_fee
-            order.token.booking_fee = booking_fee
-            order.token.save()
+            store_final_price(order)  # compute and store final price
         else:
             order.status = 'tentative'
             messages.success(request, f"Order #{order.id} accepted. Awaiting customer payment.")
@@ -860,9 +912,33 @@ def manage_tables(request, branch_id):
         return deny(request)
         
     branch = get_object_or_404(Branch, id=branch_id)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "add":
+            number = " ".join(request.POST.get("table_number", "").split())[:50]
+            try:
+                capacity = max(1, min(50, int(request.POST.get("capacity") or 0)))
+            except ValueError:
+                capacity = 0
+            if not number or not capacity:
+                messages.error(request, "Please enter a table number and the number of seats.")
+            elif Table.objects.filter(branch=branch, table_number__iexact=number).exists():
+                messages.error(request, f"Table {number} already exists.")
+            else:
+                Table.objects.create(branch=branch, table_number=number, capacity=capacity)
+                messages.success(request, f"Table {number} added.")
+        elif action == "toggle_active":
+            table = get_object_or_404(Table, id=request.POST.get("table_id"), branch=branch)
+            table.is_active = not table.is_active
+            table.save(update_fields=["is_active"])
+            messages.success(request, f"Table {table.table_number} is now {'in use' if table.is_active else 'switched off'}.")
+        return redirect('restaurants:manage_tables', branch_id=branch.id)
+
     tables = Table.objects.filter(branch=branch).order_by('table_number')
-    
-    return render(request, 'restaurants/manage_tables.html', {'branch': branch, 'tables': tables})
+    return render(request, 'restaurants/manage_tables.html', {
+        'branch': branch, 'tables': tables, 'active': 'tables',
+    })
 
 
 @login_required
@@ -981,6 +1057,8 @@ def staff_mark_completed(request, order_id):
     token = order.token
     token.status = 'completed'
     token.end_time = timezone.now()
+    if token.payment_status == 'pay_at_shop':
+        token.payment_status = 'paid'  # staff confirmed the bill was collected at the table
     token.save()
     invoice = create_invoice_for_token(token, created_by=request.user)
     send_invoice_email(invoice)

@@ -15,6 +15,10 @@
             </div>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
+        <a href="{% url 'workspace:qr_poster' branch_id %}" target="_blank" rel="noopener"
+            class="btn btn-primary btn-sm rounded-pill shadow-sm" title="Print a QR code poster for your counter">
+            <i class="bi bi-qr-code"></i> QR Code
+        </a>
         {% if can_setup %}
         <a href="{% url 'workspace:services' branch_id %}"
             class="btn btn-outline-dark btn-sm rounded-pill shadow-sm">

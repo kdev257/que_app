@@ -79,6 +79,13 @@
             {% endif %}
         </div>
 
+        {% if qr_table %}
+        <div class="alert alert-success d-flex align-items-center gap-2 rounded-4 mb-4">
+            <i class="bi bi-qr-code-scan fs-4"></i>
+            <div><b>Ordering for Table {{ qr_table.table_number }}</b><div class="small">Add items and check out. Your food will be served at this table.</div></div>
+        </div>
+        {% endif %}
+
         <!-- Categories & Menu Items -->
         {% for category in categories %}
         <div class="category-section" id="cat-{{ category.id }}">

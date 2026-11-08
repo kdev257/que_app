@@ -28,13 +28,14 @@
     <a href="{% url 'workspace:branch_edit' branch.id %}" class="btn btn-sm rounded-pill {% if active == 'details' %}btn-dark{% else %}btn-outline-dark{% endif %}">Details</a>
     {% if rest == 'restaurant' %}
     <a href="{% url 'workspace:menu' branch.id %}" class="btn btn-sm rounded-pill {% if active == 'services' %}btn-dark{% else %}btn-outline-dark{% endif %}">Menu</a>
-    <a href="{% url 'restaurants:manage_tables' branch.id %}" class="btn btn-sm rounded-pill btn-outline-dark">Tables</a>
+    <a href="{% url 'restaurants:manage_tables' branch.id %}" class="btn btn-sm rounded-pill {% if active == 'tables' %}btn-dark{% else %}btn-outline-dark{% endif %}">Tables &amp; QR</a>
     {% else %}
     <a href="{% url 'workspace:services' branch.id %}" class="btn btn-sm rounded-pill {% if active == 'services' %}btn-dark{% else %}btn-outline-dark{% endif %}">Services &amp; rates</a>
     {% endif %}
     <a href="{% url 'branch_gst_settings' branch.id %}" class="btn btn-sm rounded-pill btn-outline-dark">GST</a>
     <a href="{% url 'billing:branch_invoices' branch.id %}" class="btn btn-sm rounded-pill btn-outline-dark">Invoices</a>
     <a href="{% url 'workspace:reviews' branch.id %}" class="btn btn-sm rounded-pill {% if active == 'reviews' %}btn-dark{% else %}btn-outline-dark{% endif %}">Reviews</a>
+    <a href="{% url 'workspace:qr_poster' branch.id %}" target="_blank" rel="noopener" class="btn btn-sm rounded-pill btn-outline-dark"><i class="bi bi-qr-code"></i> QR poster</a>
     <a href="{% url 'shop_dashboard' branch.id %}" class="btn btn-sm rounded-pill btn-primary"><i class="bi bi-speedometer2"></i> {% if rest == 'restaurant' %}Kitchen{% else %}Today's queue{% endif %}</a>
   </nav>
   {% endwith %}

@@ -17,4 +17,6 @@ urlpatterns = [
     path('branch/<int:branch_id>/menu/<int:item_id>/', views.menu_item_edit, name='menu_item_edit'),
     path('branch/<int:branch_id>/menu/<int:item_id>/toggle/', views.menu_item_toggle, name='menu_item_toggle'),
     path('branch/<int:branch_id>/reviews/', views.reviews, name='reviews'),
+    path('branch/<int:branch_id>/qr/', views.qr_poster, name='qr_poster'),
+    path('branch/<int:branch_id>/table-qr/', views.table_qr_sheet, name='table_qr_sheet'),
 ]

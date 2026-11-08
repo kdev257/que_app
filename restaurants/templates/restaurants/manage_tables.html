@@ -1,0 +1,80 @@
+{% extends "workspace/_layout.html" %}
+{% block title %}Tables - {{ branch.name }}{% endblock %}
+{% block ws_title %}{{ branch.name }}{% endblock %}
+{% block ws_content %}
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <h4 class="fw-bold mb-0">Tables</h4>
+      {% if tables %}
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'workspace:table_qr_sheet' branch.id %}" target="_blank" rel="noopener" class="btn btn-primary btn-sm rounded-pill px-3">
+          <i class="bi bi-qr-code"></i> Print all table QR codes
+        </a>
+        <a href="{% url 'workspace:qr_poster' branch.id %}" target="_blank" rel="noopener" class="btn btn-outline-dark btn-sm rounded-pill px-3">
+          <i class="bi bi-file-earmark-image"></i> Entrance poster
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="row g-3">
+      {% for t in tables %}
+      <div class="col-6 col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 p-3 h-100 text-center {% if not t.is_active %}opacity-50{% endif %}">
+          <div class="small text-muted">Table</div>
+          <div class="fw-bold" style="font-size: 2rem; line-height: 1.1;">{{ t.table_number }}</div>
+          <div class="small text-muted mb-2"><i class="bi bi-people"></i> {{ t.capacity }} seats</div>
+          <div class="mb-3">
+            {% if not t.is_active %}<span class="badge rounded-pill text-bg-secondary">Switched off</span>
+            {% elif t.is_occupied %}<span class="badge rounded-pill text-bg-warning">Occupied</span>
+            {% else %}<span class="badge rounded-pill text-bg-success">Free</span>{% endif %}
+          </div>
+          <div class="d-flex flex-wrap justify-content-center gap-2 mt-auto">
+            {% if t.is_active %}
+            <a href="{% url 'workspace:table_qr_sheet' branch.id %}?table={{ t.id }}" target="_blank" rel="noopener"
+               class="btn btn-sm btn-outline-primary rounded-pill"><i class="bi bi-qr-code"></i> QR</a>
+            {% endif %}
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="toggle_active">
+              <input type="hidden" name="table_id" value="{{ t.id }}">
+              <button class="btn btn-sm rounded-pill {% if t.is_active %}btn-link text-secondary text-decoration-none{% else %}btn-success{% endif %}">
+                {% if t.is_active %}Switch off{% else %}Switch on{% endif %}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="card border-0 rounded-4 p-4 text-center">
+          <h5 class="fw-bold">No tables yet</h5>
+          <p class="text-muted mb-0">Add your tables with the form. Then print a QR card for each table, so guests can order from their seat.</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="small text-muted mt-3 mb-0">Switched-off tables are not offered to customers and their QR code stops working.</p>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm rounded-4 p-3">
+      <h5 class="fw-bold mb-3">Add a table</h5>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="mb-3">
+          <label class="form-label" for="table_number">Table number or name</label>
+          <input type="text" name="table_number" id="table_number" class="form-control" maxlength="50" placeholder="e.g. 5 or Garden 2" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="capacity">Seats</label>
+          <input type="number" name="capacity" id="capacity" class="form-control" min="1" max="50" value="4" required>
+        </div>
+        <button type="submit" class="btn btn-primary rounded-pill px-4 w-100">Add table</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

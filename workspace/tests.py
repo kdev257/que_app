@@ -346,3 +346,127 @@ class ServiceIconTests(TestCase):
         self.assertContains(response, "svc-tile svc-spa")
         self.assertContains(response, "bi-flower1")
         self.assertContains(response, "1 live for customers")
+
+
+class QrPosterTests(TestCase):
+    def setUp(self):
+        self.salon_cat = Service_Category.objects.create(name="Salon")
+        self.rest_cat = Service_Category.objects.create(name="Restaurant")
+        self.org = Organization.objects.create(name="Org", email="o@t.com", phone="1")
+        self.branch = Branch.objects.create(name="Glow", organization=self.org, services_category=self.salon_cat)
+        self.staff = User.objects.create_user(username="stf", password="pass")
+        UserProfile.objects.create(user=self.staff, role="staff", branch=self.branch)
+
+    def test_staff_gets_poster_with_branch_link(self):
+        self.client.login(username="stf", password="pass")
+        response = self.client.get(reverse("workspace:qr_poster", args=[self.branch.id]))
+        self.assertContains(response, "Scan to join the queue")
+        self.assertContains(response, reverse("branch_services", args=[self.branch.id]) + "?src=qr")
+
+    def test_restaurant_poster_links_to_menu(self):
+        rest = Branch.objects.create(name="Dhaba", organization=self.org, services_category=self.rest_cat)
+        owner = User.objects.create_user(username="own", password="pass")
+        UserProfile.objects.create(user=owner, role="org_admin", organization=self.org)
+        self.client.login(username="own", password="pass")
+        response = self.client.get(reverse("workspace:qr_poster", args=[rest.id]))
+        self.assertContains(response, "Scan to order")
+        self.assertContains(response, reverse("restaurants:menu_view", args=[rest.id]) + "?src=qr")
+
+    def test_customer_cannot_open_poster(self):
+        customer = User.objects.create_user(username="cust", password="pass")
+        UserProfile.objects.create(user=customer, role="customer")
+        self.client.login(username="cust", password="pass")
+        response = self.client.get(reverse("workspace:qr_poster", args=[self.branch.id]))
+        self.assertEqual(response.status_code, 302)
+
+
+class TableQrTests(TestCase):
+    """Table QR codes: add tables, print cards, scan -> menu remembers table -> checkout pre-selects it."""
+
+    def setUp(self):
+        from restaurants.models import GlobalMenuItem, MenuCategory, MenuCategoryName, MenuItem, Table
+        cat = Service_Category.objects.create(name="Restaurant")
+        org = Organization.objects.create(name="Org", email="o@t.com", phone="1")
+        self.rest = Branch.objects.create(name="Dhaba", organization=org, services_category=cat, is_approved=True)
+        self.other = Branch.objects.create(name="Other", organization=org, services_category=cat, is_approved=True)
+        self.admin = User.objects.create_user(username="ba", password="pass")
+        UserProfile.objects.create(user=self.admin, role="branch_admin", branch=self.rest)
+        self.customer = User.objects.create_user(username="cust", password="pass")
+        UserProfile.objects.create(user=self.customer, role="customer", pin_code="110001")
+        self.t5 = Table.objects.create(branch=self.rest, table_number="5", capacity=4, is_occupied=True)
+        self.other_table = Table.objects.create(branch=self.other, table_number="9", capacity=2)
+        mc = MenuCategory.objects.create(branch=self.rest, name=MenuCategoryName.objects.create(name="Mains"))
+        self.item = MenuItem.objects.create(category=mc, name=GlobalMenuItem.objects.create(name="Dal"), price=150)
+
+    def test_branch_admin_adds_and_switches_off_table(self):
+        from restaurants.models import Table
+        self.client.login(username="ba", password="pass")
+        url = reverse("restaurants:manage_tables", args=[self.rest.id])
+        self.client.post(url, {"action": "add", "table_number": "Garden 2", "capacity": "6"})
+        self.assertTrue(Table.objects.filter(branch=self.rest, table_number="Garden 2", capacity=6).exists())
+        self.client.post(url, {"action": "add", "table_number": "garden 2", "capacity": "2"})  # duplicate
+        self.assertEqual(Table.objects.filter(branch=self.rest, table_number__iexact="garden 2").count(), 1)
+        self.client.post(url, {"action": "toggle_active", "table_id": self.t5.id})
+        self.t5.refresh_from_db()
+        self.assertFalse(self.t5.is_active)
+
+    def test_table_qr_sheet_has_one_link_per_table(self):
+        self.client.login(username="ba", password="pass")
+        response = self.client.get(reverse("workspace:table_qr_sheet", args=[self.rest.id]))
+        self.assertContains(response, f"?table={self.t5.id}&amp;src=table_qr")
+        self.assertNotContains(response, f"?table={self.other_table.id}&")
+
+    def test_scan_remembers_table_and_checkout_preselects_it(self):
+        self.client.login(username="cust", password="pass")
+        menu = self.client.get(reverse("restaurants:menu_view", args=[self.rest.id]), {"table": self.t5.id})
+        self.assertContains(menu, "Ordering for Table 5")
+        session = self.client.session
+        session["restaurant_cart"] = {str(self.item.id): 1}
+        session["restaurant_cart_branch_id"] = self.rest.id
+        session.save()
+        checkout = self.client.get(reverse("restaurants:checkout_order"))
+        self.assertContains(checkout, "You scanned <b>Table 5</b>")
+        self.assertContains(checkout, f'<option value="{self.t5.id}" selected>')  # offered even though occupied
+
+    def _scan_and_order(self, table_payment):
+        from restaurants.models import RestaurantOrder
+        self.client.login(username="cust", password="pass")
+        self.client.get(reverse("restaurants:menu_view", args=[self.rest.id]), {"table": self.t5.id})
+        session = self.client.session
+        session["restaurant_cart"] = {str(self.item.id): 2}
+        session["restaurant_cart_branch_id"] = self.rest.id
+        session.save()
+        self.client.post(reverse("restaurants:checkout_order"), {
+            "order_type": "dine_in", "table": self.t5.id, "table_payment": table_payment,
+        })
+        return RestaurantOrder.objects.get(branch=self.rest)
+
+    def test_qr_order_pay_later_goes_straight_to_kitchen(self):
+        order = self._scan_and_order("pay_later")
+        self.assertEqual(order.status, "preparing")  # no kitchen Accept step
+        self.assertTrue(order.customer_arrived)
+        self.assertEqual(order.table, self.t5)
+        self.assertEqual(order.token.payment_status, "pay_at_shop")
+        self.assertEqual(order.token.status, "in_progress")
+        self.assertEqual(order.token.final_price, 300)  # stored for staff to collect
+
+        self.client.login(username="ba", password="pass")
+        order.status = "served"
+        order.save()
+        staff = self.client.get(reverse("restaurants:staff_dashboard", args=[self.rest.id]))
+        self.assertContains(staff, "Collect bill at table")
+        self.client.get(reverse("restaurants:staff_mark_completed", args=[order.id]))
+        order.token.refresh_from_db()
+        self.assertEqual(order.token.payment_status, "paid")
+
+    def test_qr_order_pay_online_skips_accept_and_asks_payment(self):
+        order = self._scan_and_order("online")
+        self.assertEqual(order.status, "tentative")  # payment page next, then kitchen cooks
+        self.assertEqual(order.token.payment_status, "unpaid")
+        status = self.client.get(reverse("restaurants:order_status", args=[order.id]))
+        self.assertRedirects(status, reverse("restaurants:order_payment", args=[order.id]), fetch_redirect_response=False)
+
+    def test_table_from_another_restaurant_is_ignored(self):
+        self.client.login(username="cust", password="pass")
+        menu = self.client.get(reverse("restaurants:menu_view", args=[self.rest.id]), {"table": self.other_table.id})
+        self.assertNotContains(menu, "Ordering for Table")

@@ -366,3 +366,42 @@ def reviews(request, branch_id):
         "branch": branch, "active": "reviews", "is_restaurant": _is_restaurant(branch),
         "reviews": Review.objects.filter(branch=branch).order_by("-created_at")[:200],
     })
+
+
+# ---------------------------------------------------------------------------
+# QR code poster for the counter
+# ---------------------------------------------------------------------------
+@login_required
+def qr_poster(request, branch_id):
+    """Printable A4 poster with a QR code that opens this branch's booking page (or menu)."""
+    from django.urls import reverse
+    from organization.permissions import SALON_STAFF_ROLES
+    branch = get_object_or_404(Branch.objects.select_related("services_category", "organization"), id=branch_id)
+    if not can_manage_branch(request.user, branch.id, SALON_STAFF_ROLES):
+        return deny(request)
+    is_rest = _is_restaurant(branch)
+    path = reverse("restaurants:menu_view", args=[branch.id]) if is_rest else reverse("branch_services", args=[branch.id])
+    return render(request, "workspace/qr_poster.html", {
+        "branch": branch,
+        "is_restaurant": is_rest,
+        "qr_url": request.build_absolute_uri(path) + "?src=qr",
+    })
+
+
+@login_required
+def table_qr_sheet(request, branch_id):
+    """Printable table QR cards (4 per A4 page). ?table=<id> prints just one table."""
+    from django.urls import reverse
+    from organization.permissions import SALON_STAFF_ROLES
+    from restaurants.models import Table
+    branch = get_object_or_404(Branch, id=branch_id)
+    if not can_manage_branch(request.user, branch.id, SALON_STAFF_ROLES):
+        return deny(request)
+    tables = Table.objects.filter(branch=branch, is_active=True).order_by("table_number")
+    one = request.GET.get("table")
+    if one and one.isdigit():
+        tables = tables.filter(id=int(one))
+    menu_url = request.build_absolute_uri(reverse("restaurants:menu_view", args=[branch.id]))
+    cards = [{"table": t, "url": f"{menu_url}?table={t.id}&src=table_qr"} for t in tables]
+    pages = [cards[i:i + 4] for i in range(0, len(cards), 4)]
+    return render(request, "workspace/table_qr_sheet.html", {"branch": branch, "pages": pages, "count": len(cards)})

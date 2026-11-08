@@ -46,14 +46,40 @@
                     <!-- Table Selection (Dine-In only) -->
                     <div id="table-selection-section" class="mb-4">
                         <h5 class="fw-bold mb-2 text-dark">Select Table</h5>
+                        {% if qr_table %}
+                        <div class="alert alert-success py-2 small mb-3"><i class="bi bi-qr-code-scan me-1"></i> You scanned <b>Table {{ qr_table.table_number }}</b>. Your food will come to this table.</div>
+                        {% else %}
                         <p class="text-muted small mb-3">Choose a free table to seat your party</p>
+                        {% endif %}
                         
                         <select name="table" class="form-select form-select-lg py-3 rounded-3">
                             <option value="">-- Seat Me Automatically --</option>
                             {% for table in tables %}
-                            <option value="{{ table.id }}">Table {{ table.table_number }} (Capacity: {{ table.capacity }} Pax)</option>
+                            <option value="{{ table.id }}" {% if qr_table and table.id == qr_table.id %}selected{% endif %}>Table {{ table.table_number }} (Capacity: {{ table.capacity }} Pax)</option>
                             {% endfor %}
                         </select>
+
+                        {% if qr_table %}
+                        <!-- Table-QR guests: no waiter needed. Pay now, or pay after eating. -->
+                        <h5 class="fw-bold mt-4 mb-3 text-dark">When do you want to pay?</h5>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="table_payment" id="tp_online" value="online" checked>
+                                <label class="btn btn-outline-primary btn-lg w-100 py-3 rounded-3" for="tp_online">
+                                    <i class="bi bi-phone fs-4 d-block mb-1"></i>
+                                    <span class="fw-bold">Pay online now</span>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="table_payment" id="tp_later" value="pay_later">
+                                <label class="btn btn-outline-primary btn-lg w-100 py-3 rounded-3" for="tp_later">
+                                    <i class="bi bi-cash-coin fs-4 d-block mb-1"></i>
+                                    <span class="fw-bold">Pay after eating</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-text mt-2"><i class="bi bi-lightning-charge me-1"></i>Your order goes straight to the kitchen. No need to call a waiter.</div>
+                        {% endif %}
                     </div>
 
                     {% if is_delivery_available %}
@@ -87,7 +113,8 @@
                     </div>
                     {% endif %}
 
-                    <!-- Expected Arrival (Minutes Away) -->
+                    {% if not qr_table %}
+                    <!-- Expected Arrival (Minutes Away) - not needed when the guest is already at the table -->
                     <div class="mb-4">
                         <h5 class="fw-bold mb-2 text-dark" id="minutes-until-arrival-title"><i class="bi bi-hourglass-split me-2 text-primary"></i>How soon will you arrive?</h5>
                         <p class="text-muted small mb-3" id="minutes-until-arrival-desc">Let the kitchen know how many minutes away you are so they can time your order perfectly.</p>
@@ -99,6 +126,7 @@
                         </div>
                         <div class="form-text mt-1"><i class="bi bi-info-circle me-1"></i>The kitchen will start preparing your order accordingly.</div>
                     </div>
+                    {% endif %}
 
                     <div class="bg-light p-4 rounded-4 mb-4">
                         <h5 class="fw-bold mb-3 text-dark">Order Details</h5>
@@ -119,7 +147,7 @@
 
                     <!-- Submit pre-order -->
                     <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill shadow fw-bold py-3 mt-3">
-                        <i class="bi bi-check-circle-fill me-2"></i>Place Pre-Order
+                        <i class="bi bi-check-circle-fill me-2"></i>{% if qr_table %}Place Order{% else %}Place Pre-Order{% endif %}
                     </button>
                 </form>
             </div>

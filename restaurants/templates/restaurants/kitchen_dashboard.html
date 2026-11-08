@@ -89,6 +89,9 @@
             <a href="{% url 'billing:branch_invoices' branch.id %}" class="btn btn-outline-dark fw-semibold">
                 <i class="bi bi-receipt me-1"></i>Invoices
             </a>
+            <a href="{% url 'restaurants:manage_tables' branch.id %}" class="btn btn-primary fw-semibold">
+                <i class="bi bi-qr-code me-1"></i>Tables &amp; QR
+            </a>
             <a href="{% url 'branch_gst_settings' branch.id %}" class="btn btn-outline-dark fw-semibold">
                 <i class="bi bi-percent me-1"></i>GST Settings
             </a>

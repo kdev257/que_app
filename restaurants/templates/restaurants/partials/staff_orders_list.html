@@ -187,7 +187,14 @@
                     </ul>
                 </div>
 
+                {% if order.token.payment_status == 'pay_at_shop' %}
+                <div class="alert alert-warning py-2 px-3 small fw-semibold mb-2">
+                    <i class="bi bi-cash-coin me-1"></i>Collect bill at table: &#8377;{{ order.token.final_price|default:"0" }}
+                </div>
+                <a href="{% url 'restaurants:staff_mark_completed' order.id %}" class="btn btn-outline-danger btn-sm w-100 fw-bold rounded-pill shadow-sm" onclick="return confirm('Bill collected and customer finished? This will complete the order, mark it paid and free the table.')">
+                {% else %}
                 <a href="{% url 'restaurants:staff_mark_completed' order.id %}" class="btn btn-outline-danger btn-sm w-100 fw-bold rounded-pill shadow-sm" onclick="return confirm('Is the customer finished? This will complete the order and vacate the table.')">
+                {% endif %}
                     <i class="bi bi-trash3 me-1"></i>Mark Finished
                 </a>
             </div>
