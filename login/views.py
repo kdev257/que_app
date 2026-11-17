@@ -10,7 +10,7 @@ from django.contrib.auth.views import (
 )
 from django.urls import reverse, reverse_lazy
 from .forms import Registrationform, CustomAuthenticationForm, UserProfileForm, guest_login_form
-from .models import UserProfile
+from .models import StaffRequest, UserProfile
 from django.utils.http import url_has_allowed_host_and_scheme
 from privacy.services import record_consent, log_processing
 from organization.permissions import BUSINESS_ROLES, get_user_profile, home_url_for
@@ -39,7 +39,13 @@ def registration(request):
         if form.is_valid():           
             new_user = form.save()
             record_consent(request, user=new_user, age_confirmed=form.cleaned_data['age_confirm'])
-            messages.success(request, 'Your registration was successful. Please log in.')
+            branch = form.cleaned_data.get('staff_branch')
+            if form.cleaned_data.get('account_type') == 'staff' and branch:
+                StaffRequest.objects.create(user=new_user, branch=branch)
+                messages.success(request, f'Your registration was successful. Your request to join {branch.name} as staff '
+                                          'is sent. You will get staff access once the owner or branch admin approves it.')
+            else:
+                messages.success(request, 'Your registration was successful. Please log in.')
             return redirect('user_login')
         else:
             messages.error(request, 'Registration failed. Please correct the errors below.')
@@ -58,6 +64,9 @@ def user_login(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'Welcome back, {user.username}!')
+                pending = StaffRequest.objects.filter(user=user, status='pending').select_related('branch').first()
+                if pending:
+                    messages.info(request, f'Your staff request for {pending.branch.name} is waiting for approval.')
                 
                 # Follow ?next= (e.g. a page that asked them to log in), except the plain
                 # services page for business users - they should land on their own dashboard.

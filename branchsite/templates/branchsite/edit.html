@@ -1,0 +1,193 @@
+{% extends "workspace/_layout.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Website - {{ branch.name }}{% endblock %}
+{% block ws_title %}Website{% endblock %}
+{% block ws_css %}
+<style>
+  .swatches { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .swatch { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; }
+  .swatch i { width: 18px; height: 18px; border-radius: 50%; display: inline-block; }
+  .photo-tile img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: .75rem; }
+  #site-qr { width: 120px; height: 120px; }
+  #site-qr img, #site-qr canvas { width: 100% !important; height: 100% !important; }
+</style>
+{% endblock %}
+{% block ws_content %}
+
+<!-- Status + link -->
+<div class="card ws-card p-3 p-md-4 mb-4">
+  <div class="d-flex flex-wrap gap-3 align-items-center">
+    <div class="flex-grow-1">
+      {% if site.is_published and branch.is_approved %}
+        <span class="badge bg-success mb-2"><i class="bi bi-globe"></i> Live</span>
+      {% elif site.is_published %}
+        <span class="badge bg-warning text-dark mb-2">Published - waiting for branch approval</span>
+      {% else %}
+        <span class="badge bg-secondary mb-2">Not published (only you can see it)</span>
+      {% endif %}
+      <div class="small text-muted">Your website address</div>
+      <div class="fw-semibold text-break mb-2" id="site-url">{{ site_url }}</div>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'branchsite:page' site.slug %}" target="_blank" rel="noopener" class="btn btn-sm btn-primary rounded-pill"><i class="bi bi-box-arrow-up-right"></i> View website</a>
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" id="copy-url"><i class="bi bi-link-45deg"></i> <span>Copy link</span></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" id="download-qr"><i class="bi bi-qr-code"></i> Download QR</button>
+      </div>
+    </div>
+    <div id="site-qr" role="img" aria-label="QR code of your website"></div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Settings -->
+  <div class="col-lg-7">
+    <div class="card ws-card p-3 p-md-4">
+      <h5 class="fw-bold mb-3">Look &amp; content</h5>
+      <div class="swatches mb-2">
+        <span class="swatch"><i style="background:#2563eb"></i>Ocean</span>
+        <span class="swatch"><i style="background:#db2777"></i>Rose</span>
+        <span class="swatch"><i style="background:#15803d"></i>Forest</span>
+        <span class="swatch"><i style="background:#ea580c"></i>Sunset</span>
+        <span class="swatch"><i style="background:#0f172a"></i>Night</span>
+      </div>
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="form" value="settings">
+        {{ settings_form|crispy }}
+        <p class="small text-muted">Services/menu, timings, address, phone and social links come from
+          <a href="{% url 'workspace:branch_edit' branch.id %}">Branch details</a> and
+          {% if is_restaurant %}<a href="{% url 'workspace:menu' branch.id %}">Menu</a>{% else %}<a href="{% url 'workspace:services' branch.id %}">Services &amp; rates</a>{% endif %}.
+        </p>
+        <button type="submit" class="btn btn-primary rounded-pill px-4">Save</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <!-- Offers -->
+    <div class="card ws-card p-3 p-md-4 mb-4" id="offers">
+      <h5 class="fw-bold mb-3">Offers</h5>
+      {% for o in offers %}
+      <div class="d-flex justify-content-between align-items-start gap-2 border-bottom py-2 {% if not o.is_active %}opacity-50{% endif %}">
+        <div>
+          <div class="fw-semibold">{{ o.title }}</div>
+          {% if o.details %}<div class="small text-muted">{{ o.details }}</div>{% endif %}
+          {% if o.discount_type == 'percent' %}<div class="small text-success fw-semibold">{{ o.discount_value|floatformat:"-2" }}% off on bill{% if o.max_discount %} (up to ₹{{ o.max_discount|floatformat:"-2" }}){% endif %}{% if o.min_bill_amount %} &middot; min bill ₹{{ o.min_bill_amount|floatformat:"-2" }}{% endif %}</div>
+          {% elif o.discount_type == 'flat' %}<div class="small text-success fw-semibold">₹{{ o.discount_value|floatformat:"-2" }} off on bill{% if o.min_bill_amount %} &middot; min bill ₹{{ o.min_bill_amount|floatformat:"-2" }}{% endif %}</div>
+          {% else %}<div class="small text-muted">Display only (no discount on bill)</div>{% endif %}
+          {% if o.start_date or o.valid_till %}<div class="small text-muted">{% if o.start_date %}From {{ o.start_date|date:"d M Y" }} {% endif %}{% if o.valid_till %}till {{ o.valid_till|date:"d M Y" }}{% endif %}</div>{% endif %}
+        </div>
+        <div class="d-flex gap-1">
+          <form method="post" action="{% url 'branchsite:offer_action' branch.id o.id %}">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-secondary rounded-pill" name="action" value="toggle">{% if o.is_active %}Hide{% else %}Show{% endif %}</button>
+          </form>
+          <form method="post" action="{% url 'branchsite:offer_action' branch.id o.id %}" onsubmit="return confirm('Delete this offer?');">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger rounded-pill" name="action" value="delete" aria-label="Delete"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+      </div>
+      {% empty %}
+      <p class="small text-muted">No offers yet.</p>
+      {% endfor %}
+      <form method="post" class="mt-3" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="form" value="offer">
+        {{ offer_form|crispy }}
+        <button type="submit" class="btn btn-outline-primary rounded-pill"><i class="bi bi-plus-lg"></i> Add offer</button>
+      </form>
+    </div>
+
+    <!-- Photos -->
+    <div class="card ws-card p-3 p-md-4" id="photos">
+      <h5 class="fw-bold mb-1">Photo gallery</h5>
+      <div class="small text-muted mb-3">{{ photos|length }} of {{ max_photos }} photos</div>
+      <div class="row g-2 mb-3">
+        {% for p in photos %}
+        <div class="col-4 photo-tile">
+          <img src="{{ p.image.url }}" alt="{{ p.caption }}">
+          <form method="post" action="{% url 'branchsite:photo_delete' branch.id p.id %}" onsubmit="return confirm('Delete this photo?');" class="mt-1">{% csrf_token %}
+            <button class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-trash"></i> Delete</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% if photos|length < max_photos %}
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="form" value="photo">
+        {{ photo_form|crispy }}
+        <button type="submit" class="btn btn-outline-primary rounded-pill"><i class="bi bi-upload"></i> Upload photo</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Own sections -->
+<div class="card ws-card p-3 p-md-4 mt-4" id="sections">
+  <h5 class="fw-bold mb-1">Your own sections</h5>
+  <div class="small text-muted mb-3">Add anything else you want on your website, e.g. "Our team", "Party orders", "Bridal packages". {{ sections|length }} of {{ max_sections }} sections.</div>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      {% for sec in sections %}
+      <div class="d-flex gap-3 align-items-start border-bottom py-2 {% if not sec.is_active %}opacity-50{% endif %}">
+        {% if sec.image %}<img src="{{ sec.image.url }}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:.5rem;">{% endif %}
+        <div class="flex-grow-1">
+          <div class="fw-semibold">{{ sec.sort_order }}. {{ sec.title }}</div>
+          <div class="small text-muted">{{ sec.body|truncatechars:120 }}</div>
+        </div>
+        <div class="d-flex gap-1 flex-wrap justify-content-end">
+          <a href="{% url 'branchsite:section_edit' branch.id sec.id %}" class="btn btn-sm btn-outline-primary rounded-pill">Edit</a>
+          <form method="post" action="{% url 'branchsite:section_action' branch.id sec.id %}">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-secondary rounded-pill" name="action" value="toggle">{% if sec.is_active %}Hide{% else %}Show{% endif %}</button>
+          </form>
+          <form method="post" action="{% url 'branchsite:section_action' branch.id sec.id %}" onsubmit="return confirm('Delete this section?');">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger rounded-pill" name="action" value="delete" aria-label="Delete"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+      </div>
+      {% empty %}
+      <p class="small text-muted">No sections yet.</p>
+      {% endfor %}
+    </div>
+    <div class="col-lg-5">
+      {% if sections|length < max_sections %}
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="form" value="section">
+        {{ section_form|crispy }}
+        <button type="submit" class="btn btn-outline-primary rounded-pill"><i class="bi bi-plus-lg"></i> Add section</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{{ site_url|json_script:"site-url-data" }}
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  (function () {
+    var url = JSON.parse(document.getElementById('site-url-data').textContent);
+    var box = document.getElementById('site-qr');
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(box, { text: url, width: 512, height: 512, correctLevel: QRCode.CorrectLevel.H });
+    }
+    document.getElementById('download-qr').addEventListener('click', function () {
+      var canvas = box.querySelector('canvas');
+      if (!canvas) return;
+      var a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = 'website-qr-{{ branch.id }}.png';
+      a.click();
+    });
+    var copyBtn = document.getElementById('copy-url');
+    copyBtn.addEventListener('click', function () {
+      var label = copyBtn.querySelector('span');
+      var done = function () { label.textContent = 'Copied!'; setTimeout(function () { label.textContent = 'Copy link'; }, 2000); };
+      if (navigator.clipboard) navigator.clipboard.writeText(url).then(done).catch(function () { window.prompt('Copy this link:', url); });
+      else window.prompt('Copy this link:', url);
+    });
+  })();
+</script>
+{% endblock %}

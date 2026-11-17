@@ -20,7 +20,7 @@
                 <p class="text-muted small mb-3">@{{ user.username }}</p>
                 
                 <div class="badge bg-primary-subtle text-primary rounded-pill px-3 mb-4">
-                    {{ user.profile.role|title }}
+                    {{ user.user_profile.get_role_display|title }}
                 </div>
 
                 <div class="text-start border-top pt-4">
@@ -30,7 +30,7 @@
                     </div>
                     <div class="mb-2">
                         <small class="text-muted d-block">Location</small>
-                        <span class="fw-semibold">{{ user.user_profile.city }}, {{ user.profile.state }}</span>
+                        <span class="fw-semibold">{{ user.user_profile.city|default:'-' }}{% if user.user_profile.state %}, {{ user.user_profile.state }}{% endif %}</span>
                     </div>
                 </div>
             </div>
@@ -62,24 +62,5 @@
         </div>
     </div>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const roleSelect = document.getElementById('id_role_select');
-    const orgField = document.getElementById('id_organization')?.closest('p, div.mb-3, .form-group');
-    const branchField = document.getElementById('id_branch')?.closest('p, div.mb-3, .form-group');
 
-    function toggleFields() {
-        if (roleSelect.value === 'customer') {
-            if (orgField) orgField.style.display = 'none';
-            if (branchField) branchField.style.display = 'none';
-        } else {
-            if (orgField) orgField.style.display = 'block';
-            if (branchField) branchField.style.display = 'block';
-        }
-    }
-
-    roleSelect.addEventListener('change', toggleFields);
-    toggleFields(); // Run on page load
-});
-</script>
 {% endblock %}    

@@ -49,6 +49,8 @@
             <div class="small">No: <strong>{{ invoice.invoice_number }}</strong></div>
             <div class="small">Date: {{ invoice.created_at|date:"d M Y, h:i A" }}</div>
             <div class="small">Token: #{{ invoice.token_number }}{% if invoice.service_date %} ({{ invoice.service_date|date:"d M Y" }}){% endif %}</div>
+            {% if invoice.is_gst_invoice %}<div class="small">Reverse charge: No</div>{% endif %}
+            {% if invoice.credited_amount > 0 %}<div class="badge bg-danger-subtle text-danger border border-danger mt-1">Credit note issued: ₹{{ invoice.credited_amount }}</div>{% endif %}
         </div>
     </div>
 
@@ -57,6 +59,8 @@
         <div class="fw-semibold">{{ invoice.customer_name }}</div>
         {% if invoice.customer_phone %}<div class="small">{{ invoice.customer_phone }}</div>{% endif %}
         {% if invoice.customer_email %}<div class="small">{{ invoice.customer_email }}</div>{% endif %}
+        {% if invoice.customer_gstin %}<div class="small fw-semibold mt-1">{{ invoice.customer_business_name }}{% if invoice.customer_business_name %} &middot; {% endif %}GSTIN: {{ invoice.customer_gstin }}</div>{% endif %}
+        {% if invoice.is_gst_invoice and invoice.place_of_supply_code %}<div class="small mt-1">Place of supply: <b>{{ invoice.place_of_supply_name }} ({{ invoice.place_of_supply_code }})</b></div>{% endif %}
     </div>
 
     <div class="table-responsive mb-4">
@@ -65,6 +69,7 @@
             <tr>
                 <th style="width:50px;">#</th>
                 <th>{% if invoice.source == 'restaurant' %}Item{% else %}Service{% endif %}</th>
+                <th>SAC</th>
                 <th class="amount">Qty</th>
                 <th class="amount">Rate (₹)</th>
                 <th class="amount">Amount (₹)</th>
@@ -75,12 +80,13 @@
             <tr>
                 <td>{{ forloop.counter }}</td>
                 <td>{{ item.description }}</td>
+                <td class="small">{{ item.sac_code|default:"-" }}</td>
                 <td class="amount">{{ item.quantity }}</td>
                 <td class="amount">{{ item.unit_price }}</td>
                 <td class="amount">{{ item.amount }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="5" class="text-center text-muted">No items</td></tr>
+            <tr><td colspan="6" class="text-center text-muted">No items</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -95,29 +101,83 @@
                 {% endif %}
                 {% if invoice.is_gst_invoice %}
                 <tr><td>Taxable Value</td><td class="amount">₹{{ invoice.taxable_amount }}</td></tr>
-                <tr><td>CGST</td><td class="amount">₹{{ invoice.cgst_amount }}</td></tr>
-                <tr><td>SGST</td><td class="amount">₹{{ invoice.sgst_amount }}</td></tr>
+                {% for label, rate, amount in invoice.tax_lines_with_rate %}
+                <tr><td>{{ label }}{% if rate %} @ {{ rate|floatformat:"-2" }}%{% endif %}</td><td class="amount">₹{{ amount }}</td></tr>
+                {% endfor %}
                 {% endif %}
                 {% if invoice.booking_fee > 0 %}
                 <tr><td>Booking Fee</td><td class="amount">₹{{ invoice.booking_fee }}</td></tr>
                 {% endif %}
                 {% if invoice.booking_fee_gst_amount > 0 %}
-                <tr><td>GST on Booking Fee @ {{ invoice.booking_fee_gst_percentage }}%{% if invoice.platform_gstin %}<div class="small text-muted">Platform GSTIN: {{ invoice.platform_gstin }}</div>{% endif %}</td><td class="amount">₹{{ invoice.booking_fee_gst_amount }}</td></tr>
+                {% for label, amount in invoice.fee_tax_lines %}
+                <tr><td>{{ label }} on Booking Fee{% if forloop.first %} (total {{ invoice.booking_fee_gst_percentage }}%){% endif %}{% if forloop.last and invoice.platform_gstin %}<div class="small text-muted">Platform GSTIN: {{ invoice.platform_gstin }}</div>{% endif %}</td><td class="amount">₹{{ amount }}</td></tr>
+                {% endfor %}
                 {% endif %}
                 <tr class="fw-bold fs-5"><td>Total</td><td class="amount">₹{{ invoice.total_amount }}</td></tr>
-                <tr><td>Payment</td><td class="amount">{{ invoice.payment_status_display }}</td></tr>
+                <tr><td>Payment</td><td class="amount">{{ invoice.payment_status_display }}{% if invoice.payment_mode %} &middot; {{ invoice.get_payment_mode_display }}{% endif %}</td></tr>
                 {% if invoice.cashback_amount > 0 %}
                 <tr><td>Cashback earned</td><td class="amount text-info">₹{{ invoice.cashback_amount }}</td></tr>
                 {% endif %}
             </table>
             {% if invoice.is_gst_invoice %}
             <div class="small text-muted mt-2">
-                GST @ {{ invoice.gst_percentage }}% (CGST + SGST){% if invoice.prices_include_gst %}, included in item prices{% endif %}.
+                GST @ {{ invoice.gst_percentage }}% ({% if invoice.tax_type %}{{ invoice.get_tax_type_display }}{% else %}CGST + SGST{% endif %}){% if invoice.prices_include_gst %}, included in item prices{% endif %}.
+                {% if invoice.discount_amount > 0 %}GST is charged on the amount after discount.{% endif %}
             </div>
             {% endif %}
         </div>
     </div>
 
-    <p class="text-center text-muted small mt-5 mb-0">Thank you for visiting! &middot; Generated by QuickQueue</p>
+    <p class="text-center text-muted small mt-5 mb-0">Thank you for visiting! &middot; This is a computer-generated invoice &middot; QuickQueue</p>
 </div>
+
+{% if credit_notes %}
+<div class="invoice-sheet card border-0 shadow-sm rounded-3 p-3 p-md-4 mt-3 no-print">
+    <h6 class="fw-bold mb-2">Credit notes</h6>
+    {% for cn in credit_notes %}
+    <div class="d-flex justify-content-between border-bottom py-2 small">
+        <span><a href="{% url 'billing:credit_note_detail' cn.id %}">{{ cn.number }}</a> &middot; {{ cn.get_reason_display }} &middot; {{ cn.created_at|date:"d M Y" }}</span>
+        <span class="fw-semibold text-danger">- ₹{{ cn.total_amount }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if is_staff_view %}
+<div class="invoice-sheet card border-0 shadow-sm rounded-3 p-3 p-md-4 mt-3 no-print">
+    <div class="row g-4">
+        <div class="col-md-6">
+            <h6 class="fw-bold mb-2">How was it paid?</h6>
+            <form method="post" action="{% url 'billing:set_payment_mode' invoice.id %}" class="d-flex flex-wrap gap-2">
+                {% csrf_token %}
+                {% for value, label in payment_modes %}
+                <button name="payment_mode" value="{{ value }}" class="btn btn-sm rounded-pill {% if invoice.payment_mode == value %}btn-success{% else %}btn-outline-secondary{% endif %}">{{ label }}</button>
+                {% endfor %}
+            </form>
+        </div>
+        {% if can_credit and invoice.can_credit_amount > 0 %}
+        <div class="col-md-6">
+            <h6 class="fw-bold mb-2">Issue credit note (refund / cancel)</h6>
+            <form method="post" action="{% url 'billing:credit_note_create' invoice.id %}" class="row g-2"
+                  onsubmit="return confirm('Issue a credit note? This cannot be undone.');">
+                {% csrf_token %}
+                <div class="col-6">
+                    <label class="form-label small mb-0">Amount incl. GST (max ₹{{ invoice.can_credit_amount }})</label>
+                    <input type="number" name="amount" step="0.01" min="0.01" max="{{ invoice.can_credit_amount }}" value="{{ invoice.can_credit_amount }}" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-6">
+                    <label class="form-label small mb-0">Reason</label>
+                    <select name="reason" class="form-select form-select-sm" required>
+                        {% for value, label in credit_reasons %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-12"><input type="text" name="note" maxlength="255" placeholder="Note (optional)" class="form-control form-control-sm"></div>
+                <div class="col-12"><button class="btn btn-sm btn-outline-danger rounded-pill">Issue credit note</button></div>
+            </form>
+            <div class="small text-muted mt-1">QuickQueue's booking fee is not included in the credit note.</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 {% endblock %}

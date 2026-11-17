@@ -1,0 +1,33 @@
+{% extends "workspace/_layout.html" %}
+{% block title %}Purchase bill {{ receipt.bill_number }}{% endblock %}
+{% block ws_title %}Stock &amp; purchases{% endblock %}
+{% block ws_content %}
+{% include "inventory/_tabs.html" with tab="receipts" %}
+<div class="card ws-card p-3 p-md-4">
+  <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+    <div>
+      <h5 class="fw-bold mb-0">{{ receipt.supplier.name }}</h5>
+      {% if receipt.supplier_gstin %}<div class="small">GSTIN {{ receipt.supplier_gstin }}</div>{% endif %}
+    </div>
+    <div class="text-end small">
+      <div>Bill no. <b>{{ receipt.bill_number }}</b></div>
+      <div>{{ receipt.bill_date|date:"d M Y" }}</div>
+      <div>{% if receipt.itc_claimable %}<span class="badge bg-success">Input tax credit claimable</span>{% else %}<span class="badge bg-secondary">No input tax credit (GST added to cost)</span>{% endif %}</div>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead class="table-light"><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Rate</th><th class="text-end">GST %</th><th class="text-end">Taxable</th><th class="text-end">GST</th><th class="text-end">Total</th><th class="text-end">Added to stock</th></tr></thead>
+      <tbody>
+      {% for l in lines %}
+        <tr><td>{{ l.item.name }}</td><td class="text-end">{{ l.quantity|floatformat:"-3" }} {{ l.item.unit }}</td><td class="text-end">{{ l.rate }}</td><td class="text-end">{{ l.gst_rate|floatformat:"-2" }}</td>
+          <td class="text-end">{{ l.taxable_amount }}</td><td class="text-end">{{ l.gst_amount }}</td><td class="text-end">{{ l.total_amount }}</td><td class="text-end">{{ l.stock_value }}</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot class="fw-bold"><tr><td colspan="4">Total{% if receipt.rates_include_gst %} (rates included GST){% endif %}</td><td class="text-end">&#8377;{{ receipt.taxable_amount }}</td><td class="text-end">&#8377;{{ receipt.gst_amount }}</td><td class="text-end">&#8377;{{ receipt.total_amount }}</td><td class="text-end">&#8377;{{ receipt.stock_value }}</td></tr></tfoot>
+    </table>
+  </div>
+  {% if receipt.notes %}<p class="small mb-1">Note: {{ receipt.notes }}</p>{% endif %}
+  {% if receipt.bill_file %}<a href="{{ receipt.bill_file.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary rounded-pill"><i class="bi bi-paperclip"></i> View bill</a>{% endif %}
+</div>
+{% endblock %}

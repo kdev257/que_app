@@ -1,0 +1,81 @@
+{% extends "workspace/_layout.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Expenses - {{ branch.name }}{% endblock %}
+{% block ws_title %}Expenses{% endblock %}
+{% block ws_content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <a href="?month={{ prev_month }}" class="btn btn-sm btn-outline-secondary rounded-pill" aria-label="Previous month"><i class="bi bi-chevron-left"></i></a>
+  <form method="get" class="d-flex gap-2 align-items-center">
+    <input type="month" name="month" value="{{ month }}" class="form-control form-control-sm" style="width: 170px;" onchange="this.form.submit()" aria-label="Month">
+  </form>
+  {% if next_month %}<a href="?month={{ next_month }}" class="btn btn-sm btn-outline-secondary rounded-pill" aria-label="Next month"><i class="bi bi-chevron-right"></i></a>{% endif %}
+  <span class="ms-auto fw-semibold">{{ month_date|date:"F Y" }}: &#8377;{{ month_total|floatformat:2 }}</span>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    {% if totals %}
+    <div class="card ws-card p-3 mb-3">
+      <h6 class="fw-bold mb-2">By category</h6>
+      <div class="row g-2">
+        {% for t in totals %}
+        <div class="col-sm-6 col-xl-4">
+          <div class="border rounded-3 p-2 h-100">
+            <div class="small text-muted">{{ t.category.name }} ({{ t.count }})</div>
+            <div class="fw-bold">&#8377;{{ t.total_amount|floatformat:2 }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% if month_value != month_total %}<div class="small text-muted mt-2">Cost for profit &amp; loss (without GST you can claim back): &#8377;{{ month_value|floatformat:2 }}</div>{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card ws-card p-0 overflow-hidden">
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light"><tr><th class="ps-3">Date</th><th>Category</th><th>Details</th><th>Paid by</th><th class="text-end">Amount</th><th></th></tr></thead>
+          <tbody>
+          {% for e in expenses %}
+            <tr>
+              <td class="ps-3 text-nowrap">{{ e.date|date:"d M" }}</td>
+              <td>{{ e.category.name }}</td>
+              <td class="small">{{ e.description }}{% if e.paid_to %}<div class="text-muted">To: {{ e.paid_to }}</div>{% endif %}
+                {% if e.gst_amount > 0 %}<div class="text-muted">GST &#8377;{{ e.gst_amount }}{% if e.itc_claimable %} <span class="badge bg-success-subtle text-success">claimable</span>{% endif %}</div>{% endif %}
+                {% if e.bill_file %}<a href="{{ e.bill_file.url }}" target="_blank" rel="noopener"><i class="bi bi-paperclip"></i> bill</a>{% endif %}</td>
+              <td class="small">{{ e.get_payment_mode_display }}</td>
+              <td class="text-end fw-semibold">&#8377;{{ e.total_amount }}</td>
+              <td class="text-end pe-3">
+                <form method="post" action="{% url 'expenses:delete' branch.id e.id %}" onsubmit="return confirm('Delete this expense?');">{% csrf_token %}
+                  <button class="btn btn-sm btn-link text-danger" aria-label="Delete"><i class="bi bi-trash"></i></button></form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-4">No expenses in {{ month_date|date:"F Y" }}.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card ws-card p-3 p-md-4">
+      <h6 class="fw-bold mb-3">Add expense</h6>
+      <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}{{ form|crispy }}
+        <button class="btn btn-primary rounded-pill px-4">Save expense</button></form>
+      <p class="small text-muted mt-3 mb-0">{% if branch.itc_allowed %}GST on a bill can be claimed only if the payee's GSTIN is given.{% else %}Your branch cannot claim GST paid, so GST is counted as part of the expense.{% endif %}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  (function () {
+    var select = document.getElementById('id_category_choice');
+    var box = document.getElementById('div_id_new_category');
+    function toggle() { if (box) box.style.display = select.value === '__new__' ? '' : 'none'; }
+    if (select) { select.addEventListener('change', toggle); toggle(); }
+  })();
+</script>
+{% endblock %}

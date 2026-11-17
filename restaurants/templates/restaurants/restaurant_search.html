@@ -239,7 +239,7 @@
                                     </div>
                                     {% endif %}
                                 </div>
-                                <a href="{% url 'restaurants:menu_view' branch.id %}" class="btn btn-primary btn-sm w-100 fw-bold py-2 mt-2">
+                                <a href="{% if branch.site.is_published %}{% url 'branchsite:page' branch.site.slug %}{% else %}{% url 'restaurants:menu_view' branch.id %}{% endif %}" class="btn btn-primary btn-sm w-100 fw-bold py-2 mt-2">
                                     <i class="bi bi-journal-richtext me-2"></i>View Menu & Order
                                 </a>
                             </div>

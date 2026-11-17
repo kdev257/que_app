@@ -1,0 +1,62 @@
+{% extends "workspace/_layout.html" %}
+{% block title %}Profit &amp; loss - {{ branch.name }}{% endblock %}
+{% block ws_title %}Profit &amp; loss{% endblock %}
+{% block ws_css %}
+<style>
+  .pl-table td { padding: .45rem .5rem; }
+  .pl-table .sub td { color: #6c757d; }
+  .pl-table .total td { font-weight: 700; border-top: 2px solid #212529; }
+  @media print {
+    nav, .navbar, .ws-nav, .no-print, footer { display: none !important; }
+    .ws-card { box-shadow: none !important; }
+  }
+</style>
+{% endblock %}
+{% block ws_content %}
+<div class="d-flex flex-wrap gap-2 mb-3 no-print">
+  <a href="{% url 'reports:profit_loss' branch.id %}" class="btn btn-sm btn-outline-secondary rounded-pill"><i class="bi bi-arrow-left"></i> Back</a>
+  <button type="button" class="btn btn-sm btn-outline-dark rounded-pill" onclick="window.print()"><i class="bi bi-printer"></i> Print / save PDF</button>
+</div>
+<div class="card ws-card p-3 p-md-4" style="max-width: 760px;">
+  <div class="text-center mb-3">
+    <h4 class="fw-bold mb-0">{{ report.organization.name }}</h4>
+    <div>{% if report.branch %}{{ report.branch.name }}{% else %}All branches{% endif %}</div>
+    <div class="fw-semibold mt-2">Profit &amp; loss account</div>
+    <div class="small text-muted">{{ report.period_from|date:"d M Y" }} to {{ report.period_to|date:"d M Y" }}</div>
+  </div>
+
+  {% for w in report.warning_list %}
+  <div class="alert alert-warning small py-2"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>
+  {% endfor %}
+
+  <table class="table pl-table mb-0">
+    <tbody>
+      <tr><td>Sales (without GST) <span class="small text-muted">– {{ report.invoice_count }} invoice{{ report.invoice_count|pluralize }}</span></td><td class="text-end">₹{{ report.sales }}</td></tr>
+      <tr class="sub"><td>Less: credit notes</td><td class="text-end">- ₹{{ report.credit_notes }}</td></tr>
+      <tr class="total"><td>Net sales</td><td class="text-end">₹{{ report.net_sales }}</td></tr>
+
+      <tr><td colspan="2" class="pt-4 fw-semibold">Cost of items used</td></tr>
+      <tr class="sub"><td>Opening stock</td><td class="text-end">₹{{ report.opening_stock }}</td></tr>
+      <tr class="sub"><td>Add: purchases</td><td class="text-end">₹{{ report.purchases }}</td></tr>
+      <tr class="sub"><td>Less: closing stock{% if not report.closing_stock_counted %} <span class="badge bg-warning text-dark">not counted</span>{% endif %}</td><td class="text-end">- ₹{{ report.closing_stock }}</td></tr>
+      <tr><td>Cost of items used</td><td class="text-end">₹{{ report.cost_of_items_used }}</td></tr>
+      <tr class="total"><td>Gross profit</td><td class="text-end">₹{{ report.gross_profit }}</td></tr>
+
+      <tr><td colspan="2" class="pt-4 fw-semibold">Expenses</td></tr>
+      {% for l in lines %}
+      <tr class="sub"><td>{{ l.label }}{% if l.account_code %} <span class="small">({{ l.account_code }})</span>{% endif %}</td><td class="text-end">₹{{ l.amount }}</td></tr>
+      {% empty %}
+      <tr class="sub"><td colspan="2">No expenses in this period.</td></tr>
+      {% endfor %}
+      <tr><td>Total expenses</td><td class="text-end">₹{{ report.total_expenses }}</td></tr>
+
+      <tr class="total {% if report.is_loss %}text-danger{% else %}text-success{% endif %}">
+        <td>{% if report.is_loss %}Net loss{% else %}Net profit{% endif %}</td>
+        <td class="text-end">₹{{ report.net_profit }}</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small text-muted mt-3 mb-0">Generated on {{ report.created_at|date:"d M Y, h:i A" }}{% if report.created_by %} by {{ report.created_by.get_full_name|default:report.created_by.username }}{% endif %}.
+    Figures are saved at the time of generating. Generate again after adding new bills or expenses.</p>
+</div>
+{% endblock %}

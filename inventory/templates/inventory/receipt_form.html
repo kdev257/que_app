@@ -1,0 +1,68 @@
+{% extends "workspace/_layout.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Enter purchase bill - {{ branch.name }}{% endblock %}
+{% block ws_title %}Enter purchase bill{% endblock %}
+{% block ws_content %}
+{% include "inventory/_tabs.html" with tab="receipts" %}
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <div class="card ws-card p-3 p-md-4 mb-3">
+    <div class="row g-2">
+      <div class="col-md-4">{{ form.supplier|as_crispy_field }}</div>
+      <div class="col-md-4">{{ form.bill_number|as_crispy_field }}</div>
+      <div class="col-md-4">{{ form.bill_date|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.notes|as_crispy_field }}</div>
+      <div class="col-md-6">{{ form.bill_file|as_crispy_field }}</div>
+      <div class="col-12">{{ form.rates_include_gst|as_crispy_field }}</div>
+    </div>
+    {% if form.non_field_errors %}<div class="alert alert-danger py-2">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="small">
+      <a href="{% url 'inventory:suppliers' branch.id %}">+ New supplier</a> &middot; <a href="{% url 'inventory:stock' branch.id %}">+ New item</a>
+    </div>
+  </div>
+
+  <div class="card ws-card p-3 p-md-4 mb-3">
+    <h6 class="fw-bold">Items on the bill</h6>
+    {{ formset.management_form }}
+    <div class="table-responsive">
+      <table class="table align-middle mb-2" id="lines">
+        <thead><tr><th style="min-width:220px">Item</th><th style="width:120px">Qty</th><th style="width:140px">Rate / unit</th><th style="width:110px">GST</th></tr></thead>
+        <tbody>
+        {% for f in formset %}
+          <tr class="line-row">
+            <td>{{ f.item }}{% if f.non_field_errors %}<div class="small text-danger">{{ f.non_field_errors|join:" " }}</div>{% endif %}</td>
+            <td>{{ f.quantity }}</td><td>{{ f.rate }}</td><td>{{ f.gst_rate }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" id="add-line"><i class="bi bi-plus"></i> Add line</button>
+    <template id="empty-line">
+      <tr class="line-row"><td>{{ formset.empty_form.item }}</td><td>{{ formset.empty_form.quantity }}</td><td>{{ formset.empty_form.rate }}</td><td>{{ formset.empty_form.gst_rate }}</td></tr>
+    </template>
+  </div>
+  <button type="submit" class="btn btn-primary rounded-pill px-4">Save purchase bill</button>
+  <a href="{% url 'inventory:receipts' branch.id %}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+</form>
+{% endblock %}
+{% block extra_js %}
+<script>
+  (function () {
+    // Bootstrap look for the plain inputs, and "Add line" for more rows
+    function style(root) {
+      root.querySelectorAll('select').forEach(function (el) { el.classList.add('form-select'); });
+      root.querySelectorAll('input').forEach(function (el) { el.classList.add('form-control'); });
+    }
+    var table = document.querySelector('#lines tbody');
+    style(table);
+    var total = document.getElementById('id_lines-TOTAL_FORMS');
+    document.getElementById('add-line').addEventListener('click', function () {
+      var html = document.getElementById('empty-line').innerHTML.replace(/__prefix__/g, total.value);
+      table.insertAdjacentHTML('beforeend', html);
+      style(table.lastElementChild);
+      total.value = parseInt(total.value, 10) + 1;
+    });
+  })();
+</script>
+{% endblock %}

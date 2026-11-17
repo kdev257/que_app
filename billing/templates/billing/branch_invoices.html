@@ -30,7 +30,8 @@
                     <td>#{{ inv.token_number }}</td>
                     <td>{{ inv.customer_name }}</td>
                     <td class="text-end">{{ inv.total_amount }}</td>
-                    <td>{{ inv.payment_status_display }}</td>
+                    <td>{{ inv.payment_status_display }}{% if inv.payment_mode %} &middot; {{ inv.get_payment_mode_display }}{% endif %}
+                        {% if inv.credited_amount > 0 %}<span class="badge bg-danger-subtle text-danger">Credit ₹{{ inv.credited_amount }}</span>{% endif %}</td>
                     <td class="text-end pe-4">
                         <a href="{% url 'billing:invoice_detail' inv.id %}" class="btn btn-sm btn-outline-primary rounded-pill">
                             <i class="bi bi-receipt"></i> View / Print

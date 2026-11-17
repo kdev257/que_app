@@ -406,3 +406,103 @@ def table_qr_sheet(request, branch_id):
     cards = [{"table": t, "url": f"{menu_url}?table={t.id}&src=table_qr"} for t in tables]
     pages = [cards[i:i + 4] for i in range(0, len(cards), 4)]
     return render(request, "workspace/table_qr_sheet.html", {"branch": branch, "pages": pages, "count": len(cards)})
+
+
+# ---------------------------------------------------------------------------
+# Highway location (restaurants / dhabas on a highway)
+# ---------------------------------------------------------------------------
+@login_required
+def highway(request, branch_id):
+    from restaurants.models import Highway, HighwayBranch, HighwaySegment
+    from .forms import HighwayLocationForm
+    branch, resp = _branch_or_deny(request, branch_id)
+    if resp:
+        return resp
+    if not _is_restaurant(branch):
+        messages.info(request, "Highway location is only for restaurants and dhabas.")
+        return redirect("workspace:branch_edit", branch_id=branch.id)
+    current = HighwayBranch.objects.filter(branch=branch).select_related("highway", "segment").first()
+
+    if request.method == "POST" and request.POST.get("action") == "remove":
+        if current:
+            current.delete()
+            messages.success(request, "Highway location removed. Customers will find you only in city search.")
+        return redirect("workspace:highway", branch_id=branch.id)
+
+    initial = {}
+    if current:
+        initial = {"highway_choice": str(current.highway_id), "milestone_km": current.milestone_km,
+                   "direction_of_travel": current.direction_of_travel}
+    form = HighwayLocationForm(request.POST or None, initial=initial)
+    if request.method == "POST" and form.is_valid():
+        data = form.cleaned_data
+        with transaction.atomic():
+            if data["highway_choice"] == form.NEW:
+                hw = Highway.objects.create(name=data["new_highway_name"],
+                                            start_point=data["new_start_point"].strip(),
+                                            end_point=data["new_end_point"].strip())
+            else:
+                hw = get_object_or_404(Highway, id=data["highway_choice"])
+            km = data["milestone_km"]
+            # Stretch of the highway this KM falls in (stored, so search needs no work)
+            segment = HighwaySegment.objects.filter(highway=hw, start_km__lte=km, end_km__gte=km).first()
+            HighwayBranch.objects.update_or_create(branch=branch, defaults={
+                "highway": hw, "milestone_km": km, "direction_of_travel": data["direction_of_travel"],
+                "segment": segment,
+            })
+        messages.success(request, f"Saved: {hw.name}, KM {km}. Travellers on this highway can now find you.")
+        return redirect("workspace:highway", branch_id=branch.id)
+
+    return render(request, "workspace/highway.html", {
+        "branch": branch, "active": "highway", "form": form, "current": current,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Staff: approve people who registered as staff of this branch
+# ---------------------------------------------------------------------------
+@login_required
+def staff(request, branch_id):
+    from login.models import StaffRequest
+    branch, resp = _branch_or_deny(request, branch_id)
+    if resp:
+        return resp
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action in ("approve", "reject"):
+            req = get_object_or_404(StaffRequest, id=request.POST.get("request_id"), branch=branch, status="pending")
+            if action == "approve":
+                profile, _ = UserProfile.objects.get_or_create(user=req.user, defaults={"address": "", "pin_code": ""})
+                if profile.role in ("org_admin", "branch_admin") or req.user.is_superuser:
+                    messages.error(request, f"{req.user.username} already has a business role and cannot be made staff.")
+                    return redirect("workspace:staff", branch_id=branch.id)
+                profile.role = "staff"
+                profile.organization = branch.organization
+                profile.branch = branch
+                profile.save(update_fields=["role", "organization", "branch"])
+                # Other pending requests of this person are closed
+                StaffRequest.objects.filter(user=req.user, status="pending").exclude(id=req.id).update(
+                    status="rejected", decided_at=timezone.now(), decided_by=request.user)
+                messages.success(request, f"{req.user.get_full_name() or req.user.username} is now staff of {branch.name}.")
+            else:
+                messages.success(request, "Request rejected.")
+            req.status = "approved" if action == "approve" else "rejected"
+            req.decided_at = timezone.now()
+            req.decided_by = request.user
+            req.save(update_fields=["status", "decided_at", "decided_by"])
+        elif action == "remove":
+            profile = get_object_or_404(UserProfile, id=request.POST.get("profile_id"), branch=branch, role="staff")
+            profile.role = "customer"
+            profile.organization = None
+            profile.branch = None
+            profile.save(update_fields=["role", "organization", "branch"])
+            messages.success(request, f"{profile.user.username} is no longer staff of {branch.name}.")
+        return redirect("workspace:staff", branch_id=branch.id)
+
+    return render(request, "workspace/staff.html", {
+        "branch": branch, "active": "staff",
+        "pending": StaffRequest.objects.filter(branch=branch, status="pending").select_related("user"),
+        "members": UserProfile.objects.filter(branch=branch, role__in=("staff", "branch_admin")).select_related("user").order_by("role", "user__username"),
+        "history": StaffRequest.objects.filter(branch=branch).exclude(status="pending").select_related("user", "decided_by")[:20],
+    })

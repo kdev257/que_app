@@ -55,9 +55,15 @@
                     </div>
 
                     <div class="d-grid">
+                        {% if service.site.is_published %}
+                        <a href="{% url 'branchsite:page' service.site.slug %}" class="btn btn-primary rounded-pill py-2 fw-bold shadow-sm">
+                            View Shop & Book
+                        </a>
+                        {% else %}
                         <a href="{% url 'branch_services' service.id %}" class="btn btn-primary rounded-pill py-2 fw-bold shadow-sm">
                             View Services & Book
                         </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

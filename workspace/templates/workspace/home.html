@@ -43,6 +43,7 @@
         {% else %}
         <a href="{% url 'workspace:services' b.id %}" class="btn btn-sm btn-outline-dark rounded-pill">Services ({{ b.service_count }})</a>
         {% endif %}
+        <a href="{% url 'branchsite:edit' b.id %}" class="btn btn-sm btn-outline-dark rounded-pill"><i class="bi bi-globe"></i> Website</a>
         <a href="{% url 'shop_dashboard' b.id %}" class="btn btn-sm btn-primary rounded-pill">{% if row.is_restaurant %}Kitchen{% else %}Today's queue{% endif %}</a>
       </div>
     </div>

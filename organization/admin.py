@@ -13,7 +13,7 @@ class OrganizationAdmin(admin.ModelAdmin):
 
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):
-    list_display = ("id", "organization", "name", "address", "is_approved", "rating_avg", "rating_count", "is_gst_registered", "gstin")
+    list_display = ("id", "organization", "name", "address", "is_approved", "rating_avg", "rating_count", "is_gst_registered", "gstin", "gst_state_code")
     search_fields = ("name", "organization__name", "gstin")
     list_filter = ("is_approved", "organization", "is_gst_registered")
     readonly_fields = ("rating_avg", "rating_count")
@@ -53,7 +53,8 @@ class ServiceNameAdmin(admin.ModelAdmin):
     
 @admin.register(Service_Category)
 class ServiceCategoryAdmin(admin.ModelAdmin):
-    list_display = ("id", "name")
+    list_display = ("id", "name", "place_of_supply_rule", "sac_code", "default_gst_rate", "itc_allowed", "sales_account")
+    list_editable = ("place_of_supply_rule", "sac_code", "default_gst_rate", "itc_allowed", "sales_account")
     search_fields = ("name",)
     ordering = ("name",)
     

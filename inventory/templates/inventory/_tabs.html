@@ -1,0 +1,7 @@
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="{% url 'inventory:stock' branch.id %}" class="btn btn-sm rounded-pill {% if tab == 'stock' %}btn-primary{% else %}btn-outline-primary{% endif %}"><i class="bi bi-box-seam"></i> Stock &amp; items</a>
+  <a href="{% url 'inventory:receipts' branch.id %}" class="btn btn-sm rounded-pill {% if tab == 'receipts' %}btn-primary{% else %}btn-outline-primary{% endif %}"><i class="bi bi-receipt"></i> Purchases</a>
+  <a href="{% url 'inventory:stock_counts' branch.id %}" class="btn btn-sm rounded-pill {% if tab == 'counts' %}btn-primary{% else %}btn-outline-primary{% endif %}"><i class="bi bi-clipboard-check"></i> Closing stock</a>
+  <a href="{% url 'inventory:suppliers' branch.id %}" class="btn btn-sm rounded-pill {% if tab == 'suppliers' %}btn-primary{% else %}btn-outline-primary{% endif %}"><i class="bi bi-truck"></i> Suppliers</a>
+  <a href="{% url 'inventory:receipt_new' branch.id %}" class="btn btn-sm rounded-pill btn-success ms-auto"><i class="bi bi-plus-lg"></i> Enter purchase bill</a>
+</div>

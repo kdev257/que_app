@@ -85,7 +85,7 @@
                        name="services" 
                        value="{{ service.id }}" 
                        id="service_{{ service.id }}"
-                       data-price="{{ service.price }}"> </div>
+                       data-price="{% if show_prices %}{{ service.price }}{% else %}0{% endif %}"> </div>
         </td>
         
         <td class="text-center" style="width: 60px;">
@@ -105,9 +105,13 @@
         </td>
 
         <td class="text-end pe-4">
+            {% if show_prices %}
             <span class="badge bg-success-subtle text-success fs-6 fw-bold px-3 py-2 rounded-pill">
                 ₹{{ service.price }}
             </span>
+            {% else %}
+            <a href="{{ price_login_url }}" class="small fw-semibold text-decoration-none"><i class="bi bi-lock"></i> Login to see price</a>
+            {% endif %}
         </td>
     </tr>
     {% endfor %}
@@ -119,8 +123,8 @@
                 <div class="text-start">
                     <span class="text-muted small d-block">Selected Items</span>
                         <h5 class="mb-0 fw-bold">
-                    <span id="selected-count">0</span> Services Total: 
-                    <span class="text-primary">₹<span id="total-price">0</span></span>
+                    <span id="selected-count">0</span> Services{% if show_prices %} Total: 
+                    <span class="text-primary">₹<span id="total-price">0</span></span>{% else %}<span id="total-price" class="d-none">0</span>{% endif %}
             </h5>
         </div>
         <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">

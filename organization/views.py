@@ -17,8 +17,10 @@ def branch_gst_settings(request, branch_id):
     if request.method == "POST":
         form = BranchGSTForm(request.POST, instance=branch)
         if form.is_valid():
-            form.save()
-            messages.success(request, "GST settings saved. New invoices will use these settings.")
+            branch = form.save()
+            credit = "with" if branch.itc_allowed else "without"
+            messages.success(request, f"GST settings saved: {branch.gst_percentage:g}% {credit} input tax credit. "
+                                      "New invoices will use these settings.")
             return redirect("shop_dashboard", id=branch.id)
     else:
         form = BranchGSTForm(instance=branch)

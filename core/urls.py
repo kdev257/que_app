@@ -25,7 +25,12 @@ from django.contrib.auth import views as auth_views
 from login.views import user_profile
 
 urlpatterns = [
-    path('', views.index, name='index'),
+    # Quickque landing page; the customer services page (name 'index') is now at /explore/
+    path('', views.landing, name='landing'),
+    path('explore/', views.index, name='index'),
+    # Help guides
+    path('help/', views.help_page, name='help'),
+    path('help/<slug:slug>/', views.help_page, name='help_page'),
     path('sw.js', views.service_worker, name='service_worker'),
     path('offline/', views.offline, name='offline'),
     path('accounts/profile/', user_profile, name='user_profile'),        
@@ -44,6 +49,14 @@ urlpatterns = [
     path('registration/password_reset/', auth_views.PasswordResetView.as_view(
         html_email_template_name='emails/password_reset.html'), name='password_reset'),
     path('registration/', include('django.contrib.auth.urls')),
+    # Branch mini websites (/b/<name>/) and their editor in the workspace
+    path('', include('branchsite.urls')),
+    # Stock, suppliers and purchase bills (Business Workspace)
+    path('', include('inventory.urls')),
+    # Expenses (Business Workspace)
+    path('', include('expenses.urls')),
+    # Profit & loss reports
+    path('', include('reports.urls')),
     
 ]
 if settings.DEBUG:

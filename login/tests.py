@@ -102,3 +102,57 @@ class BrowseWithoutLoginTests(TestCase):
     def test_add_to_order_cart_asks_login(self):
         response = self.client.post(reverse("restaurants:add_to_order_cart"), {})
         self.assertIn(reverse("login_choice"), response.url)
+
+
+class CustomerIdleLogoutTests(TestCase):
+    """Customers/guests are logged out after 5 idle minutes; business users and active bookings are not."""
+
+    def setUp(self):
+        org = Organization.objects.create(name="Org", email="o@t.com", phone="1")
+        self.branch = Branch.objects.create(name="Salon", organization=org,
+                                            services_category=Service_Category.objects.create(name="Salon"))
+
+    def go_idle(self, minutes=6):
+        session = self.client.session
+        session["last_seen"] = session.get("last_seen", 0) - minutes * 60
+        session.save()
+
+    def test_customer_logged_out_after_idle(self):
+        user = User.objects.create_user(username="c", password="pass")
+        UserProfile.objects.create(user=user, role="customer")
+        self.client.login(username="c", password="pass")
+        self.client.get(reverse("index"))
+        self.go_idle()
+        self.client.get(reverse("index"))
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_customer_with_active_token_stays(self):
+        from queues.models import Token
+        user = User.objects.create_user(username="c2", password="pass")
+        UserProfile.objects.create(user=user, role="customer")
+        Token.objects.create(branch=self.branch, user=user, token_number=1, status="waiting")
+        self.client.login(username="c2", password="pass")
+        self.client.get(reverse("index"))
+        self.go_idle()
+        self.client.get(reverse("index"))
+        self.assertIn("_auth_user_id", self.client.session)
+
+    def test_branch_admin_not_logged_out(self):
+        user = User.objects.create_user(username="ba", password="pass")
+        UserProfile.objects.create(user=user, role="branch_admin", branch=self.branch)
+        self.client.login(username="ba", password="pass")
+        self.client.get(reverse("workspace:home"))
+        self.go_idle(60)
+        self.client.get(reverse("workspace:home"))
+        self.assertIn("_auth_user_id", self.client.session)
+
+    def test_guest_logged_out_after_idle(self):
+        from login.models import Guest
+        guest = Guest.objects.create(name="G", email="g@t.com", phone_no="1", pin_code="110001")
+        session = self.client.session
+        session["guest_id"] = guest.id
+        session.save()
+        self.client.get(reverse("index"))
+        self.go_idle()
+        self.client.get(reverse("index"))
+        self.assertNotIn("guest_id", self.client.session)

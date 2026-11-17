@@ -217,7 +217,7 @@ def store_final_price(order):
     active_fee_obj = PlatformFee.objects.filter(is_active=True).first()
     if active_fee_obj and active_fee_obj.is_currently_active():
         booking_fee = active_fee_obj.fee_logged_in if order.token.user else active_fee_obj.fee_guest
-    order.token.final_price = subtotal + booking_fee
+    order.token.final_price = subtotal - (order.token.discount_amount or Decimal('0.00')) + booking_fee
     order.token.booking_fee = booking_fee
     order.token.save()
 
@@ -338,7 +338,10 @@ def view_order_cart(request, cart_id=None):
         else:
             booking_fee = active_fee_obj.fee_guest
             
-    final_price = subtotal + booking_fee
+    # Branch offer (set by the owner on the Website page), shown before ordering
+    from branchsite.offers import best_offer
+    offer, discount_amount = best_offer(branch, subtotal)
+    final_price = subtotal - discount_amount + booking_fee
     
     context = {
         'branch': branch,
@@ -346,6 +349,8 @@ def view_order_cart(request, cart_id=None):
         'subtotal': subtotal,
         'booking_fee': booking_fee,
         'final_price': final_price,
+        'discount_amount': discount_amount,
+        'offer_title': offer.title if offer else '',
     }
     return render(request, 'restaurants/cart.html', context)
 
@@ -480,6 +485,14 @@ def checkout_order(request, cart_id=None):
                     price=menu_item.price
                 )
                 
+            # Branch offer: work out the discount once and store it on the token (invoice uses it)
+            from branchsite.offers import best_offer
+            order_subtotal = sum((i.price * i.quantity for i in rest_order.items.all()), Decimal('0.00'))
+            _offer, order_discount = best_offer(branch, order_subtotal)
+            if order_discount > 0:
+                token.discount_amount = order_discount
+                token.save(update_fields=['discount_amount'])
+
             # Clear session cart
             if 'restaurant_cart' in request.session:
                 del request.session['restaurant_cart']
@@ -518,6 +531,9 @@ def checkout_order(request, cart_id=None):
             'total_price': total
         })
         
+    from branchsite.offers import best_offer
+    checkout_offer, checkout_discount = best_offer(branch, subtotal)
+
     user_address = ""
     if request.user.is_authenticated:
         try:
@@ -530,6 +546,8 @@ def checkout_order(request, cart_id=None):
         'tables': tables,
         'cart_items': cart_items,
         'subtotal': subtotal,
+        'discount_amount': checkout_discount,
+        'offer_title': checkout_offer.title if checkout_offer else '',
         'is_delivery_available': is_delivery_available,
         'user_address': user_address,
         'qr_table': qr_table,
@@ -611,6 +629,7 @@ def order_payment(request, order_id):
         return redirect('restaurants:order_status', order_id=order.id)
         
     subtotal = sum(item.price * item.quantity for item in order.items.all())
+    discount_amount = order.token.discount_amount or Decimal('0.00')  # stored when the order was placed
     
     # Retrieve platform/booking fee
     from accounts.models import PlatformFee
@@ -622,7 +641,7 @@ def order_payment(request, order_id):
         else:
             booking_fee = active_fee_obj.fee_guest
             
-    final_price = subtotal + booking_fee
+    final_price = subtotal - discount_amount + booking_fee
     
     # Create Razorpay Order
     import razorpay
@@ -668,6 +687,7 @@ def order_payment(request, order_id):
     context = {
         "order": order,
         "subtotal": subtotal,
+        "discount_amount": discount_amount,
         "booking_fee": booking_fee,
         "final_price": final_price,
         "razorpay_order_id": razorpay_order_id,

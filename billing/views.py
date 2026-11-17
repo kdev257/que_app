@@ -1,12 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from organization.models import Branch
-from organization.permissions import can_manage_branch, deny, SALON_STAFF_ROLES
+from organization.permissions import KITCHEN_ROLES, SALON_STAFF_ROLES, can_manage_branch, deny
 from queues.views import get_guest
 from privacy.services import log_processing
-from .models import Invoice
+from .models import CreditNote, Invoice
 
 
 INVOICE_LINK_SALT = "billing.invoice"
@@ -52,11 +53,61 @@ def invoice_detail(request, invoice_id):
     is_staff_view = request.user.is_authenticated and can_manage_branch(
         request.user, invoice.branch_id, SALON_STAFF_ROLES
     )
+    can_credit = request.user.is_authenticated and can_manage_branch(request.user, invoice.branch_id, KITCHEN_ROLES)
     return render(request, "billing/invoice_detail.html", {
         "invoice": invoice,
         "items": invoice.items.all(),
         "is_staff_view": is_staff_view,
+        "can_credit": can_credit,
+        "credit_notes": invoice.credit_notes.all(),
+        "payment_modes": Invoice.PAYMENT_MODE_CHOICES,
+        "credit_reasons": CreditNote.REASON_CHOICES,
     })
+
+
+@login_required
+@require_POST
+def set_payment_mode(request, invoice_id):
+    """Staff record how the bill was paid (cash / UPI / card ...)."""
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    if not can_manage_branch(request.user, invoice.branch_id, SALON_STAFF_ROLES):
+        return deny(request)
+    mode = request.POST.get("payment_mode", "")
+    if mode in dict(Invoice.PAYMENT_MODE_CHOICES):
+        Invoice.objects.filter(pk=invoice.pk).update(payment_mode=mode)
+        messages.success(request, f"Payment mode saved: {dict(Invoice.PAYMENT_MODE_CHOICES)[mode]}.")
+    return redirect("billing:invoice_detail", invoice_id=invoice.id)
+
+
+@login_required
+@require_POST
+def credit_note_create(request, invoice_id):
+    """Branch admin / owner: issue a credit note (refund or cancel) against an invoice."""
+    from decimal import Decimal, InvalidOperation
+    from .services import create_credit_note
+    invoice = get_object_or_404(Invoice.objects.select_related("branch"), id=invoice_id)
+    if not can_manage_branch(request.user, invoice.branch_id, KITCHEN_ROLES):
+        return deny(request, "Only the branch admin or owner can issue a credit note.")
+    reason = request.POST.get("reason", "")
+    if reason not in dict(CreditNote.REASON_CHOICES):
+        messages.error(request, "Please choose a reason.")
+        return redirect("billing:invoice_detail", invoice_id=invoice.id)
+    try:
+        amount = Decimal(request.POST.get("amount") or "0")
+        note = create_credit_note(invoice, amount, reason, request.POST.get("note", "").strip(), request.user)
+    except (InvalidOperation, ValueError) as exc:
+        messages.error(request, f"Credit note not made. {exc}")
+        return redirect("billing:invoice_detail", invoice_id=invoice.id)
+    messages.success(request, f"Credit note {note.number} made for Rs. {note.total_amount}.")
+    return redirect("billing:credit_note_detail", credit_note_id=note.id)
+
+
+def credit_note_detail(request, credit_note_id):
+    note = get_object_or_404(CreditNote.objects.select_related("invoice", "branch"), id=credit_note_id)
+    if not _can_view_invoice(request, note.invoice):
+        messages.error(request, "You are not authorized to view this credit note.")
+        return redirect("index")
+    return render(request, "billing/credit_note_detail.html", {"note": note, "invoice": note.invoice})
 
 
 @login_required

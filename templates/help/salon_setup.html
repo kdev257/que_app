@@ -1,0 +1,81 @@
+{% extends 'help/_base.html' %}
+{% block help_body %}
+<h2 class="hp-title mb-1"><i class="bi bi-scissors text-primary"></i> Set up a salon or service business</h2>
+<p class="text-muted">For salons, nail studios, spas, barbers and other shops where customers book a service. About 20 minutes.</p>
+
+<div class="hp-step"><span class="hp-num">1</span><div>
+  <h6>Register your business</h6>
+  <ul>
+    <li>On the home page click <b>List your business</b> (<a href="{% url 'workspace:signup' %}">open</a>).</li>
+    <li>Choose a username and password and enter your business name. You become the <b>owner</b>.</li>
+    <li>If you are logged in as a customer, log out first.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">2</span><div>
+  <h6>Add your branch</h6>
+  <ul>
+    <li>In the Business Workspace click <b>Add a branch</b>.</li>
+    <li>Pick the <b>Type of business</b> (for example Salon), then fill in address, area, city, PIN code, phone and opening / closing time.</li>
+    <li><b>Staff serving customers at the same time</b> - used to show customers the waiting time.</li>
+    <li>Add nearby landmarks (e.g. "Near City Mall") so customers can find you in search.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">3</span><div>
+  <h6>Add services and rates</h6>
+  <ul>
+    <li>Open <b>Services &amp; rates</b>. Pick a service name from the list or type a new one.</li>
+    <li>Enter the price and the average time in minutes. Untick <b>Active</b> to hide a service.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">4</span><div>
+  <h6>GST settings (if you are GST registered)</h6>
+  <ul>
+    <li>Open <b>GST</b>. Enter your GSTIN and state, and an invoice prefix (e.g. DST).</li>
+    <li>Choose your SAC code. For salons and beauty services GST is <b>5% without input tax credit</b> by law, so the rate is set for you.</li>
+    <li>Not registered? Skip this step - bills are made without GST.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">5</span><div>
+  <h6>Wait for approval</h6>
+  <p class="mb-0">QuickQueue checks new branches. Till then the branch shows <b>Waiting for approval</b> and customers cannot see it. You can keep setting up meanwhile.</p>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">6</span><div>
+  <h6>Make your website</h6>
+  <ul>
+    <li>Open <b>Website</b>. Add tagline, about text, logo and banner photo, and pick a colour theme.</li>
+    <li>Add <b>offers</b> with start and end dates - the discount is applied on bills automatically.</li>
+    <li>Add gallery photos and your own sections (title, text and photo).</li>
+    <li>Tick <b>Publish my website</b>, then copy the link or download the QR to share.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">7</span><div>
+  <h6>Print the QR poster</h6>
+  <p class="mb-0">Open <b>QR poster</b> and print it. Customers scan it at your door to join the queue or book.</p>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">8</span><div>
+  <h6>Run the day</h6>
+  <ul>
+    <li>Open <b>Today's queue</b>. Open the branch in the morning and close it at night.</li>
+    <li>Click <b>Start</b> and <b>End</b> for each customer, or mark a no-show. The GST invoice is made for you.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">9</span><div>
+  <h6>Back office (optional, owner and branch admin)</h6>
+  <ul>
+    <li><b>Stock &amp; purchases</b> - add items and suppliers, and enter purchase bills.</li>
+    <li><b>Stock count</b> - at month end staff count stock; you approve it.</li>
+    <li><b>Expenses</b> - rent, salary, electricity and so on.</li>
+    <li><b>Profit &amp; loss</b> - pick a period and click <b>Generate</b>.</li>
+  </ul>
+</div></div>
+
+<div class="hp-tip mt-3"><i class="bi bi-lightbulb"></i> <b>Staff logins:</b> ask each person to <a href="{% url 'register' %}">register</a>, choose <b>Branch staff</b> and pick your branch. Then approve them under <b>Staff</b> in the workspace.</div>
+{% endblock %}

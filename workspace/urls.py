@@ -19,4 +19,6 @@ urlpatterns = [
     path('branch/<int:branch_id>/reviews/', views.reviews, name='reviews'),
     path('branch/<int:branch_id>/qr/', views.qr_poster, name='qr_poster'),
     path('branch/<int:branch_id>/table-qr/', views.table_qr_sheet, name='table_qr_sheet'),
+    path('branch/<int:branch_id>/highway/', views.highway, name='highway'),
+    path('branch/<int:branch_id>/staff/', views.staff, name='staff'),
 ]

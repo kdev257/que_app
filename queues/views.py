@@ -96,6 +96,20 @@ def customer_required(view_func):
 
 # Create your views here.
 
+
+def _apply_branch_offer(cart_items, total_price, discount_amount):
+    """Return (offer, discount): the branch's best running offer if it beats the current discount."""
+    from decimal import Decimal
+    from branchsite.offers import best_offer
+    first = next(iter(cart_items), None)
+    if first is None:
+        return None, discount_amount
+    offer, discount = best_offer(first.service.branch, Decimal(total_price))
+    if offer is not None and discount > discount_amount:
+        return offer, discount
+    return None, discount_amount
+
+
 @customer_required
 def service_category(request):
     """Landing page for customers when they login, shows all the service categories available in the system"""
@@ -112,7 +126,7 @@ def service_list(request, service_category_id):  # open to all; login is asked a
 
     from organization.matching import filter_options, find_branches
 
-    base_qs = Branch.objects.filter(services_category=category, is_approved=True).select_related("organization", "services_category")
+    base_qs = Branch.objects.filter(services_category=category, is_approved=True).select_related("organization", "services_category", "site")
     # Search (name / city / area / landmark / PIN) or, by default, nearest first:
     # same PIN -> nearby PINs (same first 3 digits) -> customer's city -> all
     branches, match_note, is_search = find_branches(request, base_qs)
@@ -257,6 +271,13 @@ def view_cart(request, cart_id):
             if discount_obj.cashback_amount > 0:
                 cashback_amount = discount_obj.cashback_amount
             final_price = Decimal(total_price) - discount_amount
+
+    # Branch offer set by the owner (Website page): used if it gives more than the platform promo
+    _offer, discount_amount = _apply_branch_offer(cart_items, total_price, discount_amount)
+    if _offer:
+        final_price = Decimal(total_price) - discount_amount
+        promo_title = _offer.title
+        cashback_amount = Decimal('0.00')
 
     # Retrieve and apply global platform/booking fee
     from accounts.models import PlatformFee
@@ -416,6 +437,13 @@ def _execute_token_creation(request, cart, booking_date, commute_time, payment_s
                 cashback_amount = discount_obj.cashback_amount
             final_price = Decimal(total_price) - discount_amount
 
+    # Branch offer set by the owner (Website page): used if it gives more than the platform promo
+    _offer, discount_amount = _apply_branch_offer(cart_items, total_price, discount_amount)
+    if _offer:
+        final_price = Decimal(total_price) - discount_amount
+        promo_title = _offer.title
+        cashback_amount = Decimal('0.00')
+
     # Retrieve and apply global platform/booking fee
     from accounts.models import PlatformFee
     active_fee_obj = PlatformFee.objects.filter(is_active=True).first()
@@ -550,6 +578,13 @@ def create_token(request, id):
             if discount_obj.discount_percentage > 0:
                 discount_amount = (Decimal(total_price) * discount_obj.discount_percentage / Decimal('100.00')).quantize(Decimal('0.01'))
             final_price = Decimal(total_price) - discount_amount
+
+    # Branch offer set by the owner (Website page): used if it gives more than the platform promo
+    _offer, discount_amount = _apply_branch_offer(cart_items, total_price, discount_amount)
+    if _offer:
+        final_price = Decimal(total_price) - discount_amount
+        promo_title = _offer.title
+        cashback_amount = Decimal('0.00')
 
     from accounts.models import PlatformFee
     active_fee_obj = PlatformFee.objects.filter(is_active=True).first()
@@ -1094,6 +1129,13 @@ def checkout(request, cart_id):
             if discount_obj.discount_percentage > 0:
                 discount_amount = (Decimal(total_price) * discount_obj.discount_percentage / Decimal('100.00')).quantize(Decimal('0.01'))
             final_price = Decimal(total_price) - discount_amount
+
+    # Branch offer set by the owner (Website page): used if it gives more than the platform promo
+    _offer, discount_amount = _apply_branch_offer(cart_items, total_price, discount_amount)
+    if _offer:
+        final_price = Decimal(total_price) - discount_amount
+        promo_title = _offer.title
+        cashback_amount = Decimal('0.00')
 
     # Platform/booking fee
     from accounts.models import PlatformFee

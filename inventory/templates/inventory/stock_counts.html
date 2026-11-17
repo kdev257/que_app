@@ -1,0 +1,38 @@
+{% extends "workspace/_layout.html" %}
+{% block title %}Closing stock - {{ branch.name }}{% endblock %}
+{% block ws_title %}Stock &amp; purchases{% endblock %}
+{% block ws_content %}
+{% include "inventory/_tabs.html" with tab="counts" %}
+{% if pending %}
+<div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2">
+  <span><i class="bi bi-hourglass-split"></i> A staff stock count as at <b>{{ pending.as_at|date:"d M Y" }}</b> is waiting for your approval.</span>
+  <a href="{% url 'inventory:stock_count_review' branch.id pending.id %}" class="btn btn-sm btn-warning rounded-pill">Review now</a>
+</div>
+{% endif %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <p class="text-muted small mb-0">Count your stock (e.g. on the last day of each month). The app works out the items used and their cost for profit &amp; loss.</p>
+  <a href="{% url 'inventory:stock_count_new' branch.id %}" class="btn btn-success rounded-pill"><i class="bi bi-plus-lg"></i> Enter closing stock</a>
+</div>
+<div class="card ws-card p-0 overflow-hidden">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light"><tr><th class="ps-3">As at</th><th class="text-end">Closing stock value</th><th class="text-end">Items used (cost)</th><th>Status</th><th>Note</th><th></th></tr></thead>
+      <tbody>
+      {% for c in counts %}
+        <tr>
+          <td class="ps-3 fw-semibold">{{ c.as_at|date:"d M Y" }}</td>
+          <td class="text-end">&#8377;{{ c.closing_value }}</td>
+          <td class="text-end">&#8377;{{ c.used_value }}</td>
+          <td class="small">{% if c.status == 'approved' %}<span class="badge bg-success-subtle text-success">Approved</span>{% elif c.status == 'pending' %}<span class="badge bg-warning text-dark">Waiting</span>{% else %}<span class="badge bg-secondary">Sent back</span>{% endif %}
+            {% if c.counted_by %}<div class="text-muted">Counted: {{ c.counted_by.username }}</div>{% endif %}{% if c.approved_by %}<div class="text-muted">Approved: {{ c.approved_by.username }}</div>{% endif %}</td>
+          <td class="small text-muted">{{ c.notes }}</td>
+          <td class="text-end pe-3">{% if c.status == 'approved' %}<a href="{% url 'inventory:stock_count_detail' branch.id c.id %}" class="btn btn-sm btn-outline-primary rounded-pill">View</a>{% else %}<a href="{% url 'inventory:stock_count_review' branch.id c.id %}" class="btn btn-sm btn-warning rounded-pill">Review</a>{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">No closing stock entered yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

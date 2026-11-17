@@ -1,0 +1,16 @@
+{% extends "workspace/_layout.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Edit section - {{ branch.name }}{% endblock %}
+{% block ws_title %}Edit website section{% endblock %}
+{% block ws_content %}
+<div class="card ws-card p-3 p-md-4" style="max-width: 640px;">
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    {{ form|crispy }}
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary rounded-pill px-4">Save</button>
+      <a href="{% url 'branchsite:edit' branch.id %}#sections" class="btn btn-outline-secondary rounded-pill">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

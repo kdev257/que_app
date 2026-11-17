@@ -46,6 +46,9 @@ class UserProfile(models.Model):
     city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True, blank=True,related_name="user_city"    )
     pin_code = models.CharField(max_length=10)
     image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
+    # Optional: for a business (B2B) GST invoice
+    business_name = models.CharField(max_length=150, blank=True, help_text="Only if you want GST invoices in your business name")
+    gstin = models.CharField(max_length=15, blank=True, verbose_name="GSTIN", help_text="Your business GSTIN (optional)")
     
     def __str__(self):
         return f"{self.user.username}'s Profile"
@@ -61,3 +64,24 @@ class Guest(models.Model):
 
     def __str__(self):
         return f"{self.name}, {self.pin_code}"
+
+class StaffRequest(models.Model):
+    """A person registers as 'branch staff' and picks a branch. The owner or branch admin
+    of that branch approves it; only then the login gets the staff role for that branch."""
+    STATUS_CHOICES = [
+        ("pending", "Waiting for approval"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="staff_requests")
+    branch = models.ForeignKey("organization.Branch", on_delete=models.CASCADE, related_name="staff_requests")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
+    created_at = models.DateTimeField(default=timezone.now)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} -> {self.branch} ({self.status})"

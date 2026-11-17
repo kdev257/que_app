@@ -1,0 +1,55 @@
+{% extends "workspace/_layout.html" %}
+{% block title %}Staff - {{ branch.name }}{% endblock %}
+{% block ws_title %}Staff{% endblock %}
+{% block ws_content %}
+<div class="card ws-card p-3 p-md-4 mb-4">
+  <h5 class="fw-bold mb-1">Requests to join</h5>
+  <p class="small text-muted">Staff register on QuickQueue, choose <b>Branch staff</b> and pick <b>{{ branch.name }}</b>. Approve only people who work here.</p>
+  {% for r in pending %}
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom py-2">
+    <div>
+      <div class="fw-semibold">{{ r.user.get_full_name|default:r.user.username }}</div>
+      <div class="small text-muted">@{{ r.user.username }}{% if r.user.email %} &middot; {{ r.user.email }}{% endif %} &middot; asked on {{ r.created_at|date:"d M Y" }}</div>
+    </div>
+    <form method="post" class="d-flex gap-2">{% csrf_token %}
+      <input type="hidden" name="request_id" value="{{ r.id }}">
+      <button class="btn btn-sm btn-success rounded-pill" name="action" value="approve"><i class="bi bi-check-lg"></i> Approve</button>
+      <button class="btn btn-sm btn-outline-danger rounded-pill" name="action" value="reject">Reject</button>
+    </form>
+  </div>
+  {% empty %}
+  <p class="small text-muted mb-0">No requests waiting.</p>
+  {% endfor %}
+</div>
+
+<div class="card ws-card p-3 p-md-4 mb-4">
+  <h5 class="fw-bold mb-3">Current staff</h5>
+  {% for p in members %}
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom py-2">
+    <div>
+      <div class="fw-semibold">{{ p.user.get_full_name|default:p.user.username }}</div>
+      <div class="small text-muted">@{{ p.user.username }} &middot; {% if p.role == 'branch_admin' %}Branch admin{% else %}Staff{% endif %}</div>
+    </div>
+    {% if p.role == 'staff' %}
+    <form method="post" onsubmit="return confirm('Remove this person from staff?');">{% csrf_token %}
+      <input type="hidden" name="profile_id" value="{{ p.id }}">
+      <button class="btn btn-sm btn-outline-danger rounded-pill" name="action" value="remove">Remove</button>
+    </form>
+    {% endif %}
+  </div>
+  {% empty %}
+  <p class="small text-muted mb-0">No staff yet.</p>
+  {% endfor %}
+</div>
+
+{% if history %}
+<div class="card ws-card p-3 p-md-4">
+  <h6 class="fw-bold mb-2">Recent decisions</h6>
+  <ul class="list-unstyled small mb-0">
+    {% for h in history %}
+    <li class="mb-1">{{ h.user.username }} - {{ h.get_status_display }}{% if h.decided_by %} by {{ h.decided_by.username }}{% endif %}{% if h.decided_at %} on {{ h.decided_at|date:"d M Y" }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

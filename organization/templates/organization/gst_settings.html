@@ -16,6 +16,20 @@
                 <div class="small text-muted mb-4">
                     If <b>prices include GST</b> is ticked, GST is taken out of the price and the bill total stays the same.
                     If not ticked, GST is added on top of the price.
+                    {% if branch.sac_code %}
+                    <br><b>SAC {{ branch.sac_code }}</b>:
+                    {% if branch.sac_code == "996331" %}
+                      <b>5% without input tax credit</b>. Restaurants in a hotel with any room above ₹7,500 per day (or a hotel that opted in) charge <b>18% with input tax credit</b> - tick the box above.
+                    {% elif branch.sac_code|slice:":5" == "99972" %}
+                      <b>5% without input tax credit is compulsory</b> (since 22 Sept 2025). 18% with credit is not allowed.
+                    {% else %}
+                      enter the GST % that applies to your service.
+                    {% endif %}
+                    {% endif %}
+                    <br>This branch {% if branch.itc_allowed %}<b>can</b>{% else %}<b>cannot</b>{% endif %} claim GST paid on purchases (input tax credit).
+                    <br>Invoice numbers: <b>PREFIX/26-27/00001</b>, a new series every financial year (1 April).
+                    <br>Salons, restaurants, gyms, spas and clinics: GST is always split as <b>CGST + SGST</b> (or CGST + UTGST in a Union Territory),
+                    because the service is given at your branch. Other businesses may charge <b>IGST</b> when the customer is from another state.
                 </div>
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary rounded-pill px-4">Save</button>
@@ -25,4 +39,24 @@
         </div>
     </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  // Show "SAC code" box only for "Other"; show the hotel tick box only for restaurants (996331)
+  (function () {
+    var choice = document.getElementById('id_sac_choice');
+    var other = document.getElementById('div_id_sac_other');
+    var hotel = document.getElementById('div_id_specified_premises');
+    function toggle() {
+      if (!choice) return;
+      if (other) other.style.display = choice.value === 'other' ? '' : 'none';
+      if (hotel) hotel.style.display = choice.value === '996331' ? '' : 'none';
+      // GST % is fixed by law for beauty/wellness (99972x) and restaurants (996331)
+      var rate = document.getElementById('id_gst_percentage');
+      var fixed = choice.value.indexOf('99972') === 0 || choice.value === '996331';
+      if (rate && choice.value) rate.readOnly = fixed;
+    }
+    if (choice) { choice.addEventListener('change', toggle); toggle(); }
+  })();
+</script>
 {% endblock %}

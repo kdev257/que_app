@@ -111,7 +111,8 @@
                                 <div>
                                     <h5 class="fw-bold text-dark mb-1">{{ item.name }}</h5>
                                     <p class="text-muted small mb-0">{{ item.description }}</p>
-                                    <span class="h6 fw-bold text-primary d-block mt-2">₹{{ item.price }}</span>
+                                    {% if show_prices %}<span class="h6 fw-bold text-primary d-block mt-2">₹{{ item.price }}</span>
+                                    {% else %}<span class="d-block mt-2"><a href="{{ price_login_url }}" class="small fw-semibold text-decoration-none"><i class="bi bi-lock"></i> Login to see price</a></span>{% endif %}
                                 </div>
                             </div>
                             

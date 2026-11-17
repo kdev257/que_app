@@ -1,0 +1,47 @@
+{% extends "workspace/_layout.html" %}
+{% block title %}Review stock count - {{ branch.name }}{% endblock %}
+{% block ws_title %}Review stock count{% endblock %}
+{% block ws_content %}
+{% include "inventory/_tabs.html" with tab="counts" %}
+<div class="card ws-card p-3 mb-3">
+  <div class="d-flex flex-wrap gap-3 justify-content-between">
+    <div>As at <b>{{ count.as_at|date:"d M Y" }}</b> &middot; counted by <b>{{ count.counted_by.get_full_name|default:count.counted_by.username|default:"-" }}</b> on {{ count.created_at|date:"d M, g:i A" }}</div>
+    <span class="badge {% if count.status == 'pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %} align-self-start">{{ count.get_status_display }}</span>
+  </div>
+  {% if count.status == 'returned' %}<div class="small text-muted mt-1">Sent back: {{ count.return_note }}</div>{% endif %}
+</div>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="card ws-card p-0 overflow-hidden mb-3">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light"><tr><th class="ps-3">Item</th><th class="text-end">Book stock</th><th class="text-end">Staff counted</th><th style="width: 190px;">Approve quantity</th><th class="text-end pe-3">Avg cost</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+          <tr>
+            <td class="ps-3 fw-semibold">{{ row.item.name }}</td>
+            <td class="text-end">{{ row.book|floatformat:"-3" }} {{ row.item.unit }}</td>
+            <td class="text-end">{% if row.staff is None %}<span class="text-muted">not counted</span>{% else %}{{ row.staff|floatformat:"-3" }}{% if row.staff != row.book %} <span class="badge bg-warning-subtle text-warning-emphasis">differs</span>{% endif %}{% endif %}</td>
+            <td><div class="input-group input-group-sm">
+              <input type="number" step="0.001" min="0" name="count_{{ row.item.id }}" value="{{ row.value }}" class="form-control" aria-label="Approved {{ row.item.name }}">
+              <span class="input-group-text">{{ row.item.unit }}</span></div></td>
+            <td class="text-end pe-3">&#8377;{{ row.avg_cost|floatformat:2 }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="d-flex flex-wrap gap-2 align-items-start">
+    <button name="action" value="approve" class="btn btn-success rounded-pill px-4"
+            onclick="return confirm('Approve this closing stock? Stock and profit figures will be updated.');"><i class="bi bi-check2-circle"></i> Approve</button>
+    <div class="input-group" style="max-width: 460px;">
+      <input type="text" name="return_note" maxlength="255" class="form-control" placeholder="Reason, e.g. please recount gel polish">
+      <button name="action" value="return" class="btn btn-outline-danger">Send back</button>
+    </div>
+  </div>
+  <p class="small text-muted mt-2">"Not counted" items are filled with the book stock. Change any quantity before approving.</p>
+</form>
+{% endblock %}

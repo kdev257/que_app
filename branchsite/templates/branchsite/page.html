@@ -1,0 +1,297 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ branch.name }}{% if branch.city %} - {{ branch.city }}{% endif %}</title>
+  <meta name="description" content="{{ site.tagline|default:site.about|truncatechars:160 }}">
+  {% if is_preview %}<meta name="robots" content="noindex">{% endif %}
+  <meta property="og:title" content="{{ branch.name }}">
+  <meta property="og:description" content="{{ site.tagline|default:site.about|truncatechars:160 }}">
+  <meta property="og:url" content="{{ page_url }}">
+  {% if site.banner %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ site.banner.url }}">{% endif %}
+  <link rel="icon" type="image/png" href="{% if site.logo %}{{ site.logo.url }}{% else %}{% static 'pwa/favicon-32.png' %}{% endif %}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/services.css' %}">
+  <style>
+    .theme-ocean  { --brand: #2563eb; --brand-dark: #1e3a8a; --soft: #eff6ff; --bg: #f8fafc; --card: #fff; --ink: #0f172a; --muted: #64748b; }
+    .theme-rose   { --brand: #db2777; --brand-dark: #831843; --soft: #fdf2f8; --bg: #fffafc; --card: #fff; --ink: #1f1023; --muted: #6b5563; }
+    .theme-forest { --brand: #15803d; --brand-dark: #14532d; --soft: #f0fdf4; --bg: #f9fbf7; --card: #fff; --ink: #0f1f14; --muted: #5b6b60; }
+    .theme-sunset { --brand: #ea580c; --brand-dark: #7c2d12; --soft: #fff7ed; --bg: #fffbf7; --card: #fff; --ink: #24140a; --muted: #6f5b4d; }
+    .theme-night  { --brand: #f59e0b; --brand-dark: #0b1120; --soft: #1e293b; --bg: #0f172a; --card: #172033; --ink: #f1f5f9; --muted: #94a3b8; }
+
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink); padding-bottom: 72px; }
+    a { color: var(--brand); }
+    .text-muted-2 { color: var(--muted) !important; }
+    .preview-bar { background: #fde68a; color: #422006; font-size: .9rem; }
+
+    .hero { position: relative; color: #fff; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); }
+    .hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.25)); }
+    .hero .inner { position: relative; z-index: 1; padding: 72px 0 40px; }
+    .hero.has-banner .inner { padding-top: 24px; }
+    /* Banner photo: 5 cm tall, with border and shadow */
+    /* Whole photo is shown (never cut); a blurred copy fills the empty sides */
+    .banner-frame { position: relative; height: 5cm; border: 4px solid #fff; border-radius: 1.25rem; overflow: hidden;
+                    box-shadow: 0 12px 30px rgba(0,0,0,.35); margin-bottom: 1.5rem; background: #fff; }
+    .banner-frame .bg { position: absolute; inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px);
+                        object-fit: cover; filter: blur(18px) brightness(1.05); opacity: .85; }
+    .banner-frame .fg { position: relative; width: 100%; height: 100%; object-fit: contain; display: block; }
+    .brand-row { display: flex; align-items: center; gap: 1rem; }
+    .hero .logo { width: 84px; height: 84px; border-radius: 20px; object-fit: cover; background: #fff; border: 3px solid rgba(255,255,255,.9); }
+    .hero h1 { font-weight: 800; font-size: clamp(1.8rem, 5vw, 3rem); line-height: 1.1; }
+    .hero .chip { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35); border-radius: 999px; padding: .25rem .75rem; font-size: .85rem; }
+    .btn-brand { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 600; }
+    .btn-brand:hover { filter: brightness(.92); color: #fff; }
+    .theme-night .btn-brand { color: #111827; }
+    .btn-glass { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.5); color: #fff; font-weight: 600; }
+    .btn-glass:hover { background: rgba(255,255,255,.28); color: #fff; }
+
+    section { padding: 40px 0 8px; }
+    .section-title { font-weight: 800; font-size: 1.4rem; margin-bottom: 1rem; }
+    .section-title i { color: var(--brand); }
+    .card-s { background: var(--card); border: 0; border-radius: 1rem; box-shadow: 0 1px 8px rgba(0,0,0,.06); }
+    .theme-night .card-s { box-shadow: none; border: 1px solid #263248; }
+    .offer { background: var(--soft); border: 1px dashed var(--brand); border-radius: 1rem; }
+    .offer .tag { color: var(--brand); font-weight: 800; }
+    .price { font-weight: 700; color: var(--brand); white-space: nowrap; }
+    .price-lock { font-size: .85rem; font-weight: 600; white-space: nowrap; text-decoration: none; }
+    /* About us: elegant serif font */
+    .about-text { font-family: 'Playfair Display', Georgia, serif; font-size: 1.2rem; line-height: 1.85; font-style: italic; white-space: pre-line; }
+    .about-text::first-letter { font-size: 2.6rem; font-weight: 700; font-style: normal; color: var(--brand); float: left; line-height: 1; margin: .25rem .5rem 0 0; }
+    .about-title { font-family: 'Playfair Display', Georgia, serif; }
+    .veg-dot { display: inline-block; width: 12px; height: 12px; border: 1.5px solid #16a34a; border-radius: 2px; position: relative; top: 1px; }
+    .veg-dot::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; background: #16a34a; }
+    .veg-dot.nonveg { border-color: #b91c1c; } .veg-dot.nonveg::after { background: #b91c1c; }
+    .gallery img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: .9rem; cursor: zoom-in; }
+    .stars { color: #f59e0b; letter-spacing: 1px; }
+    .map-frame { width: 100%; height: 260px; border: 0; border-radius: 1rem; }
+    .book-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1030; background: var(--card); border-top: 1px solid rgba(0,0,0,.08); padding: .6rem 1rem; }
+    footer { color: var(--muted); font-size: .85rem; }
+    @media (min-width: 768px) { body { padding-bottom: 0; } }
+  </style>
+</head>
+<body class="theme-{{ site.theme }}">
+
+{% if is_preview or can_edit %}
+<div class="preview-bar py-2">
+  <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <span>
+      {% if is_preview %}<i class="bi bi-eye"></i> <b>Preview.</b> Only you can see this page.
+        {% if not site.is_published %}Tick "Publish my website" to make it public.{% elif not branch.is_approved %}It will be public once QuickQueue approves your branch.{% endif %}
+      {% else %}<i class="bi bi-globe"></i> This page is live.{% endif %}
+    </span>
+    <a href="{% url 'branchsite:edit' branch.id %}" class="btn btn-sm btn-dark rounded-pill"><i class="bi bi-pencil"></i> Edit website</a>
+  </div>
+</div>
+{% endif %}
+
+<!-- Top: name, tagline, book -->
+<header class="hero {% if site.banner %}has-banner{% endif %}">
+  <div class="container inner">
+    {% if site.banner %}<div class="banner-frame"><img class="bg" src="{{ site.banner.url }}" alt=""><img class="fg" src="{{ site.banner.url }}" alt="{{ branch.name }}"></div>{% endif %}
+    <div class="brand-row mb-3">
+      {% if site.logo %}<img src="{{ site.logo.url }}" alt="{{ branch.name }} logo" class="logo">{% endif %}
+      <div>
+        <h1 class="mb-1">{{ branch.name }}</h1>
+        {% if site.tagline %}<p class="fs-5 mb-0 opacity-90">{{ site.tagline }}</p>{% endif %}
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mb-4">
+      {% if branch.is_open %}<span class="chip"><i class="bi bi-circle-fill text-success small"></i> Open now</span>
+      {% else %}<span class="chip"><i class="bi bi-circle-fill text-danger small"></i> Closed now</span>{% endif %}
+      {% if branch.rating_count %}<span class="chip"><i class="bi bi-star-fill text-warning"></i> {{ branch.rating_avg|floatformat:1 }} ({{ branch.rating_count }} review{{ branch.rating_count|pluralize }})</span>{% endif %}
+      {% if branch.locality or branch.city %}<span class="chip"><i class="bi bi-geo-alt"></i> {% if branch.locality %}{{ branch.locality }}, {% endif %}{{ branch.city|default:"" }}</span>{% endif %}
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{{ book_url }}" class="btn btn-brand btn-lg rounded-pill px-4">
+        {% if is_restaurant %}<i class="bi bi-bag"></i> Order now{% else %}<i class="bi bi-calendar-check"></i> Book now{% endif %}
+      </a>
+      {% if branch.phone %}<a href="tel:{{ branch.phone }}" class="btn btn-glass btn-lg rounded-pill px-4"><i class="bi bi-telephone"></i> Call</a>{% endif %}
+      {% if branch.whatsapp_link %}<a href="{{ branch.whatsapp_link }}" target="_blank" rel="noopener" class="btn btn-glass btn-lg rounded-pill px-4"><i class="bi bi-whatsapp"></i> WhatsApp</a>{% endif %}
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  {% if offers %}
+  <section id="offers">
+    <h2 class="section-title"><i class="bi bi-tag"></i> Offers</h2>
+    <div class="row g-3">
+      {% for o in offers %}
+      <div class="col-md-6 col-lg-4">
+        <div class="offer p-3 h-100">
+          <div class="tag fs-5">{{ o.title }}</div>
+          {% if o.details %}<div class="text-muted-2">{{ o.details }}</div>{% endif %}
+          {% if o.discount_type != 'none' %}<div class="small mt-2 fw-semibold"><i class="bi bi-check2-circle"></i> Applied automatically on your bill{% if o.min_bill_amount %} (min bill ₹{{ o.min_bill_amount|floatformat:"-2" }}){% endif %}</div>{% endif %}
+          {% if o.valid_till %}<div class="small mt-2 text-muted-2"><i class="bi bi-clock"></i> Valid till {{ o.valid_till|date:"d M Y" }}</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if site.about %}
+  <section id="about">
+    <h2 class="section-title about-title"><i class="bi bi-info-circle"></i> About us</h2>
+    <div class="card-s p-3 p-md-4 about-text">{{ site.about }}</div>
+  </section>
+  {% endif %}
+
+  {% if services %}
+  <section id="services">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="section-title mb-0"><i class="bi bi-scissors"></i> Services &amp; rates</h2>
+      <a href="{{ book_url }}" class="btn btn-sm btn-brand rounded-pill px-3">Book</a>
+    </div>
+    <div class="row g-3">
+      {% for s in services %}
+      <div class="col-md-6">
+        <div class="card-s p-3 h-100 d-flex gap-3 align-items-start">
+          <span class="svc-chip svc-{{ s.name.icon_group|default:'other' }}" aria-hidden="true"><i class="bi {{ s.name.icon|default:'bi-stars' }}"></i></span>
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between gap-2">
+              <span class="fw-semibold">{{ s.name.name }}</span>
+              {% if show_prices %}<span class="price">&#8377;{{ s.price|floatformat:"-2" }}</span>
+              {% else %}<a href="{{ price_login_url }}" class="price-lock"><i class="bi bi-lock"></i> Login to see price</a>{% endif %}
+            </div>
+            <div class="small text-muted-2"><i class="bi bi-clock"></i> about {{ s.average_time_minutes }} min</div>
+            {% if s.description %}<div class="small mt-1">{{ s.description }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if menu %}
+  <section id="menu">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="section-title mb-0"><i class="bi bi-book"></i> Menu</h2>
+      <a href="{{ book_url }}" class="btn btn-sm btn-brand rounded-pill px-3">Order</a>
+    </div>
+    <div class="row g-3">
+      {% for cat in menu %}
+      <div class="col-md-6">
+        <div class="card-s p-3 h-100">
+          <h3 class="h6 fw-bold text-uppercase text-muted-2 mb-2">{{ cat.name.name }}</h3>
+          <ul class="list-unstyled mb-0">
+            {% for item in cat.items %}
+            <li class="d-flex justify-content-between gap-2 py-1">
+              <span><span class="veg-dot {% if not item.is_veg %}nonveg{% endif %}" title="{% if item.is_veg %}Veg{% else %}Non-veg{% endif %}"></span> {{ item.name.name }}</span>
+              {% if show_prices %}<span class="price">&#8377;{{ item.price|floatformat:"-2" }}</span>
+              {% else %}<a href="{{ price_login_url }}" class="price-lock"><i class="bi bi-lock"></i> Login</a>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% for sec in sections %}
+  <section id="section-{{ sec.id }}">
+    <h2 class="section-title">{{ sec.title }}</h2>
+    <div class="card-s p-3 p-md-4"><div class="row g-3 align-items-center">
+      {% if sec.image %}<div class="col-md-5"><img src="{{ sec.image.url }}" alt="{{ sec.title }}" class="img-fluid rounded-4 w-100" style="max-height: 340px; object-fit: cover;" loading="lazy"></div>{% endif %}
+      <div class="{% if sec.image %}col-md-7{% else %}col-12{% endif %}"><div style="white-space: pre-line; line-height: 1.7;">{{ sec.body }}</div></div>
+    </div></div>
+  </section>
+  {% endfor %}
+
+  {% if photos %}
+  <section id="gallery">
+    <h2 class="section-title"><i class="bi bi-images"></i> Gallery</h2>
+    <div class="row g-2 g-md-3 gallery">
+      {% for p in photos %}
+      <div class="col-6 col-md-4 col-lg-3">
+        <a href="{{ p.image.url }}" target="_blank" rel="noopener"><img src="{{ p.image.url }}" alt="{{ p.caption|default:branch.name }}" loading="lazy"></a>
+        {% if p.caption %}<div class="small text-muted-2 mt-1">{{ p.caption }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if site.show_reviews and branch.rating_count %}
+  <section id="reviews">
+    <h2 class="section-title"><i class="bi bi-chat-heart"></i> What customers say</h2>
+    <div class="mb-3"><span class="stars fs-5">★</span> <b>{{ branch.rating_avg|floatformat:1 }}</b> out of 5 &middot; {{ branch.rating_count }} rating{{ branch.rating_count|pluralize }}</div>
+    <div class="row g-3">
+      {% for r in reviews %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card-s p-3 h-100">
+          <div class="d-flex justify-content-between"><b>{{ r.display_name }}</b><span class="stars">{{ r.stars }}</span></div>
+          <div class="small text-muted-2 mb-2">{{ r.created_at|date:"d M Y" }}</div>
+          <div>{{ r.comment }}</div>
+          {% if r.reply %}<div class="small mt-2 p-2 rounded" style="background: var(--soft);"><b>Reply:</b> {{ r.reply }}</div>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <a href="{% url 'reviews:branch_reviews' branch.id %}" class="d-inline-block mt-3">See all reviews</a>
+  </section>
+  {% endif %}
+
+  {% if site.show_hours or site.show_location %}
+  <section id="visit">
+    <h2 class="section-title"><i class="bi bi-geo-alt"></i> Visit us</h2>
+    <div class="row g-3">
+      <div class="col-md-5">
+        <div class="card-s p-3 p-md-4 h-100">
+          {% if site.show_hours %}
+          <div class="fw-semibold mb-1"><i class="bi bi-clock"></i> Timings</div>
+          <div class="mb-1">{{ branch.opening_time|time:"g:i A" }} &ndash; {{ branch.closing_time|time:"g:i A" }}</div>
+          {% if site.hours_note %}<div class="text-muted-2 small mb-3">{{ site.hours_note }}</div>{% else %}<div class="mb-3"></div>{% endif %}
+          {% endif %}
+          {% if site.show_location and address %}
+          <div class="fw-semibold mb-1"><i class="bi bi-house-door"></i> Address</div>
+          <div class="mb-3">{{ address }}</div>
+          <a href="{{ map_link }}" target="_blank" rel="noopener" class="btn btn-sm btn-brand rounded-pill px-3"><i class="bi bi-sign-turn-right"></i> Get directions</a>
+          {% endif %}
+        </div>
+      </div>
+      {% if site.show_location and map_embed %}
+      <div class="col-md-7">
+        <iframe class="map-frame" src="{{ map_embed }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Map of {{ branch.name }}"></iframe>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if site.show_contact %}
+  <section id="contact">
+    <h2 class="section-title"><i class="bi bi-telephone"></i> Contact</h2>
+    <div class="card-s p-3 p-md-4">
+      <div class="d-flex flex-wrap gap-3 mb-3">
+        {% if branch.phone %}<a href="tel:{{ branch.phone }}" class="text-decoration-none"><i class="bi bi-telephone"></i> {{ branch.phone }}</a>{% endif %}
+        {% if branch.email %}<a href="mailto:{{ branch.email }}" class="text-decoration-none"><i class="bi bi-envelope"></i> {{ branch.email }}</a>{% endif %}
+      </div>
+      {% include "organization/_branch_social.html" with b=branch %}
+      <div class="mt-3">
+        <div class="small fw-semibold mb-2 text-muted-2">Share this page</div>
+        {% include "organization/_share_buttons.html" with share_text=branch.name %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <footer class="text-center py-5">
+    &copy; {% now "Y" %} {{ branch.name }} &middot; Bookings by <a href="{% url 'index' %}">QuickQueue</a>
+  </footer>
+</main>
+
+<!-- Phone: book button always at the bottom -->
+<div class="book-bar d-flex d-md-none gap-2">
+  <a href="{{ book_url }}" class="btn btn-brand rounded-pill flex-grow-1">{% if is_restaurant %}Order now{% else %}Book now{% endif %}</a>
+  {% if branch.phone %}<a href="tel:{{ branch.phone }}" class="btn btn-outline-secondary rounded-pill" aria-label="Call"><i class="bi bi-telephone"></i></a>{% endif %}
+</div>
+</body>
+</html>

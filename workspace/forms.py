@@ -43,7 +43,7 @@ class BranchForm(forms.ModelForm):
 
     class Meta:
         model = Branch
-        fields = ["name", "services_category", "address", "locality", "city", "state", "pin_code",
+        fields = ["name", "services_category", "address", "locality", "city", "gst_state_code", "pin_code",
                   "phone", "email", "number_of_employees", "opening_time", "closing_time", "offers_delivery",
                   "website_url", "instagram_url", "facebook_url", "google_maps_url", "whatsapp_number"]
         labels = {
@@ -147,3 +147,46 @@ class MenuItemForm(forms.Form):
 
     def clean_item_name(self):
         return " ".join(self.cleaned_data["item_name"].split())
+
+
+class HighwayLocationForm(forms.Form):
+    """Where a highway restaurant / dhaba is, so travellers find it in 'Highway' search."""
+    NEW = "new"
+    highway_choice = forms.ChoiceField(label="Highway")
+    new_highway_name = forms.CharField(max_length=100, required=False, label="New highway name",
+                                       widget=forms.TextInput(attrs={"placeholder": "e.g. NH-44"}))
+    new_start_point = forms.CharField(max_length=100, required=False, label="Highway starts at",
+                                      widget=forms.TextInput(attrs={"placeholder": "e.g. Delhi"}))
+    new_end_point = forms.CharField(max_length=100, required=False, label="Highway ends at",
+                                    widget=forms.TextInput(attrs={"placeholder": "e.g. Kanyakumari"}))
+    milestone_km = forms.DecimalField(max_digits=6, decimal_places=2, min_value=0, max_value=9999,
+                                      label="KM stone", help_text="The KM number written on the milestone at your dhaba, e.g. 112")
+    direction_of_travel = forms.ChoiceField(label="Which side of the road", choices=[
+        ("BOTH", "Both sides can reach us"),
+        ("UP", "Only travellers going towards the END point"),
+        ("DOWN", "Only travellers going towards the START point"),
+    ])
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from restaurants.models import Highway
+        self.fields["highway_choice"].choices = (
+            [("", "Choose a highway")]
+            + [(str(h.id), str(h)) for h in Highway.objects.order_by("name")]
+            + [(self.NEW, "+ Add a new highway")]
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("highway_choice") == self.NEW:
+            from restaurants.models import Highway
+            name = " ".join((cleaned.get("new_highway_name") or "").split())
+            if not name:
+                self.add_error("new_highway_name", "Enter the highway name.")
+            elif Highway.objects.filter(name__iexact=name).exists():
+                self.add_error("new_highway_name", "This highway is already in the list. Please choose it above.")
+            for f in ("new_start_point", "new_end_point"):
+                if not (cleaned.get(f) or "").strip():
+                    self.add_error(f, "Required for a new highway.")
+            cleaned["new_highway_name"] = name
+        return cleaned

@@ -22,7 +22,8 @@
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;color:#495057;margin-bottom:12px;">
   <tr><td>Date: {{ invoice.created_at|date:"d M Y, h:i A" }}</td><td style="text-align:right;">Token #{{ invoice.token_number }}</td></tr>
   {% if invoice.seller_address %}<tr><td colspan="2" style="padding-top:4px;">{{ invoice.seller_address }}</td></tr>{% endif %}
-  {% if invoice.is_gst_invoice %}<tr><td colspan="2" style="padding-top:4px;"><b>GSTIN:</b> {{ invoice.gstin }}</td></tr>{% endif %}
+  {% if invoice.is_gst_invoice %}<tr><td colspan="2" style="padding-top:4px;"><b>GSTIN:</b> {{ invoice.gstin }}{% if invoice.place_of_supply_code %} &middot; <b>Place of supply:</b> {{ invoice.place_of_supply_name }} ({{ invoice.place_of_supply_code }}){% endif %}</td></tr>{% endif %}
+  {% if invoice.customer_gstin %}<tr><td colspan="2" style="padding-top:4px;"><b>Billed to:</b> {{ invoice.customer_business_name|default:invoice.customer_name }} &middot; GSTIN {{ invoice.customer_gstin }}</td></tr>{% endif %}
 </table>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e9ecef;border-radius:8px;font-size:14px;">
@@ -45,11 +46,10 @@
   {% if invoice.discount_amount > 0 %}<tr><td style="padding:3px 10px;">Discount</td><td style="padding:3px 10px;text-align:right;color:#198754;">- ₹{{ invoice.discount_amount }}</td></tr>{% endif %}
   {% if invoice.is_gst_invoice %}
   <tr><td style="padding:3px 10px;">Taxable value</td><td style="padding:3px 10px;text-align:right;">₹{{ invoice.taxable_amount }}</td></tr>
-  <tr><td style="padding:3px 10px;">CGST</td><td style="padding:3px 10px;text-align:right;">₹{{ invoice.cgst_amount }}</td></tr>
-  <tr><td style="padding:3px 10px;">SGST</td><td style="padding:3px 10px;text-align:right;">₹{{ invoice.sgst_amount }}</td></tr>
+  {% for label, amount in invoice.tax_lines %}<tr><td style="padding:3px 10px;">{{ label }}</td><td style="padding:3px 10px;text-align:right;">₹{{ amount }}</td></tr>{% endfor %}
   {% endif %}
   {% if invoice.booking_fee > 0 %}<tr><td style="padding:3px 10px;">Booking fee</td><td style="padding:3px 10px;text-align:right;">₹{{ invoice.booking_fee }}</td></tr>{% endif %}
-  {% if invoice.booking_fee_gst_amount > 0 %}<tr><td style="padding:3px 10px;">GST on booking fee @ {{ invoice.booking_fee_gst_percentage }}%</td><td style="padding:3px 10px;text-align:right;">₹{{ invoice.booking_fee_gst_amount }}</td></tr>{% endif %}
+  {% if invoice.booking_fee_gst_amount > 0 %}{% for label, amount in invoice.fee_tax_lines %}<tr><td style="padding:3px 10px;">{{ label }} on booking fee</td><td style="padding:3px 10px;text-align:right;">₹{{ amount }}</td></tr>{% endfor %}{% endif %}
   <tr><td style="padding:8px 10px;font-size:17px;font-weight:bold;border-top:2px solid #212529;">Total</td><td style="padding:8px 10px;font-size:17px;font-weight:bold;text-align:right;border-top:2px solid #212529;">₹{{ invoice.total_amount }}</td></tr>
   <tr><td style="padding:3px 10px;color:#6c757d;">Payment</td><td style="padding:3px 10px;text-align:right;color:#6c757d;">{{ invoice.payment_status_display }}</td></tr>
 </table>

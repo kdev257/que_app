@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Credit note {{ note.number }}{% endblock %}
+{% block extra_css %}
+<style>
+    .invoice-sheet { background: #fff; max-width: 820px; margin: 0 auto; }
+    .amount { text-align: right; white-space: nowrap; }
+    @media print {
+        nav.navbar, footer, .no-print, .alert { display: none !important; }
+        body { background: #fff !important; }
+        .invoice-sheet { box-shadow: none !important; border: 0 !important; max-width: 100%; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 no-print" style="max-width: 820px; margin: 0 auto;">
+    <a href="{% url 'billing:invoice_detail' invoice.id %}" class="btn btn-outline-secondary rounded-pill"><i class="bi bi-arrow-left"></i> Invoice {{ invoice.invoice_number }}</a>
+    <button type="button" onclick="window.print()" class="btn btn-primary rounded-pill px-4"><i class="bi bi-printer me-1"></i> Print / Save as PDF</button>
+</div>
+
+<div class="invoice-sheet card border shadow-sm rounded-3 p-3 p-md-5">
+    <div class="d-flex justify-content-between flex-wrap gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">{{ invoice.seller_name }}</h4>
+            {% if invoice.seller_address %}<div class="small text-muted">{{ invoice.seller_address }}</div>{% endif %}
+            {% if invoice.is_gst_invoice %}<div class="small fw-semibold mt-1">GSTIN: {{ invoice.gstin }}</div>{% endif %}
+        </div>
+        <div class="text-end">
+            <h3 class="fw-bold text-uppercase mb-1">Credit Note</h3>
+            <div class="small">No: <strong>{{ note.number }}</strong></div>
+            <div class="small">Date: {{ note.created_at|date:"d M Y" }}</div>
+            <div class="small">Against invoice: <b>{{ invoice.invoice_number }}</b> dated {{ invoice.created_at|date:"d M Y" }}</div>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <div class="small text-muted text-uppercase fw-semibold">Issued To</div>
+        <div class="fw-semibold">{{ invoice.customer_business_name|default:invoice.customer_name }}</div>
+        {% if invoice.customer_gstin %}<div class="small">GSTIN: {{ invoice.customer_gstin }}</div>{% endif %}
+        {% if invoice.place_of_supply_code %}<div class="small">Place of supply: {{ invoice.place_of_supply_name }} ({{ invoice.place_of_supply_code }})</div>{% endif %}
+        <div class="small mt-1">Reason: {{ note.get_reason_display }}{% if note.note %} &middot; {{ note.note }}{% endif %}</div>
+    </div>
+
+    <div class="row justify-content-end">
+        <div class="col-md-6">
+            <table class="table table-sm mb-0">
+                <tr><td>Taxable value</td><td class="amount">₹{{ note.taxable_amount }}</td></tr>
+                {% if note.gst_amount > 0 %}
+                {% for label, amount in note.tax_lines %}
+                <tr><td>{{ label }}</td><td class="amount">₹{{ amount }}</td></tr>
+                {% endfor %}
+                {% endif %}
+                <tr class="fw-bold fs-5"><td>Total credit</td><td class="amount">₹{{ note.total_amount }}</td></tr>
+            </table>
+        </div>
+    </div>
+    <p class="text-center text-muted small mt-5 mb-0">This is a computer-generated credit note &middot; QuickQueue</p>
+</div>
+{% endblock %}

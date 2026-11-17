@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - QuickQueue Help{% endblock %}
+{% block extra_css %}
+<style>
+  .hp-card { background: #fff; border: 0; border-radius: 1rem; box-shadow: 0 1px 8px rgba(15,23,42,.07); padding: 1.5rem; }
+  .hp-nav a { display: block; padding: .5rem .75rem; border-radius: .6rem; color: #0f172a; text-decoration: none; }
+  .hp-nav a:hover { background: #f1f5f9; }
+  .hp-nav a.active { background: #1d4ed8; color: #fff; }
+  .hp-step { display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid #eef2f7; }
+  .hp-step:last-child { border-bottom: 0; }
+  .hp-num { width: 34px; height: 34px; border-radius: 50%; background: #1d4ed8; color: #fff; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .hp-step h6 { font-weight: 700; margin-bottom: .25rem; }
+  .hp-step ul { margin: .25rem 0 0; padding-left: 1.1rem; }
+  .hp-step li, .hp-step p { color: #475569; font-size: .95rem; }
+  .hp-tip { background: #fef9c3; border-radius: .75rem; padding: .75rem 1rem; font-size: .9rem; }
+  .hp-title { font-weight: 800; letter-spacing: -.5px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <aside class="col-lg-3">
+    <div class="hp-card hp-nav">
+      <div class="small text-muted text-uppercase fw-semibold mb-2">Help guides</div>
+      <a href="{% url 'help' %}" class="{% if not slug %}active{% endif %}"><i class="bi bi-life-preserver me-1"></i> All guides</a>
+      {% for s, t in guides %}
+      <a href="{% url 'help_page' s %}" class="{% if s == slug %}active{% endif %}">{{ t }}</a>
+      {% endfor %}
+      <hr>
+      <a href="{% url 'landing' %}"><i class="bi bi-house me-1"></i> QuickQueue home</a>
+    </div>
+  </aside>
+  <div class="col-lg-9">
+    <div class="hp-card">
+      {% block help_body %}{% endblock %}
+    </div>
+    <div class="hp-card mt-3 text-center">
+      <div class="fw-semibold">Still need help?</div>
+      <a href="mailto:{{ support_email }}" class="text-decoration-none"><i class="bi bi-envelope"></i> {{ support_email }}</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

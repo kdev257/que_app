@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User,UserProfile,State,City
+from .models import User,UserProfile,State,City,StaffRequest
 # Register your models here.
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -22,3 +22,10 @@ class CityAdmin(admin.ModelAdmin):
     list_display = ('name', 'state')
     search_fields = ('name', 'state__name')
     
+
+
+@admin.register(StaffRequest)
+class StaffRequestAdmin(admin.ModelAdmin):
+    list_display = ('user', 'branch', 'status', 'created_at', 'decided_by')
+    list_filter = ('status',)
+    search_fields = ('user__username', 'branch__name')

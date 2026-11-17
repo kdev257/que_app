@@ -1,0 +1,32 @@
+{% extends "workspace/_layout.html" %}
+{% block title %}Closing stock {{ count.as_at|date:"d M Y" }}{% endblock %}
+{% block ws_title %}Closing stock as at {{ count.as_at|date:"d M Y" }}{% endblock %}
+{% block ws_content %}
+{% include "inventory/_tabs.html" with tab="counts" %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-4"><div class="card ws-card p-3"><div class="small text-muted">Closing stock value</div><div class="fs-4 fw-bold">&#8377;{{ count.closing_value }}</div></div></div>
+  <div class="col-6 col-md-4"><div class="card ws-card p-3"><div class="small text-muted">Items used (cost)</div><div class="fs-4 fw-bold">&#8377;{{ count.used_value }}</div></div></div>
+</div>
+<div class="card ws-card p-0 overflow-hidden">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead class="table-light"><tr><th class="ps-3">Item</th><th class="text-end">Book</th><th class="text-end">Counted</th><th class="text-end">Used</th><th class="text-end">Avg cost</th><th class="text-end">Closing value</th><th class="text-end pe-3">Used value</th></tr></thead>
+      <tbody>
+      {% for l in lines %}
+        <tr>
+          <td class="ps-3">{{ l.item.name }}</td>
+          <td class="text-end">{{ l.book_qty|floatformat:"-3" }}</td>
+          <td class="text-end">{{ l.counted_qty|floatformat:"-3" }}</td>
+          <td class="text-end {% if l.used_qty < 0 %}text-success{% endif %}">{{ l.used_qty|floatformat:"-3" }} {{ l.item.unit }}</td>
+          <td class="text-end">&#8377;{{ l.avg_cost|floatformat:2 }}</td>
+          <td class="text-end">&#8377;{{ l.closing_value }}</td>
+          <td class="text-end pe-3">&#8377;{{ l.used_value }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% if count.notes %}<p class="small text-muted mt-2">Note: {{ count.notes }}</p>{% endif %}
+<p class="small text-muted mt-2">A negative "used" quantity means more stock was found than the book stock.</p>
+{% endblock %}

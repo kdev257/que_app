@@ -68,6 +68,12 @@
                             <span class="text-muted">Subtotal</span>
                             <span class="fw-semibold text-dark">₹{{ subtotal }}</span>
                         </div>
+                        {% if discount_amount > 0 %}
+                        <div class="d-flex justify-content-between mb-2 text-success">
+                            <span><i class="bi bi-tag"></i> Offer discount</span>
+                            <span class="fw-semibold">- ₹{{ discount_amount }}</span>
+                        </div>
+                        {% endif %}
 
                         <div class="d-flex justify-content-between mb-2">
                             <span class="text-muted">Booking Convenience Fee</span>

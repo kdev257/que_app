@@ -57,6 +57,11 @@ INSTALLED_APPS = [
     'privacy',
     'reviews',
     'workspace',
+    'branchsite',
+    'inventory',
+    'expenses',
+    'ledger',
+    'reports',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -69,6 +74,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'login.middleware.CustomerIdleLogoutMiddleware',
     'privacy.middleware.ConsentRequiredMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -87,6 +93,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'privacy.context_processors.data_protection',
                 'workspace.context_processors.workspace_nav',
+                'branchsite.context_processors.price_visibility',
             ],
         },
     },
@@ -142,6 +149,9 @@ USE_TZ = False
 SESSION_COOKIE_AGE = 14400   # 4 Hours
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+# Customers and guests: log out after 5 minutes without activity (not while they have an active booking).
+# Business accounts keep the 4-hour session above.
+CUSTOMER_IDLE_LOGOUT_SECONDS = 300
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
@@ -163,6 +173,8 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+# Support email shown on the landing page (change in .env if needed)
+SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'adminquesaas@gmail.com')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 # EMAIL SETTINGS (Development - Console)
 

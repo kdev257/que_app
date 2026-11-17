@@ -61,6 +61,7 @@ class PlatformFee(models.Model):
     fee_gst_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=18.00, help_text="GST % on the booking fee")
     fee_includes_gst = models.BooleanField(default=True, help_text="Tick if the fee amount already includes GST")
     platform_gstin = models.CharField(max_length=15, blank=True, help_text="Platform GSTIN shown on invoices for the fee GST (optional)")
+    platform_state_code = models.CharField(max_length=2, blank=True, help_text="GST state code where QuickQueue is registered, e.g. 27. Decides CGST+SGST or IGST on the fee. Leave empty to use the first 2 digits of the platform GSTIN.")
 
     def is_currently_active(self):
         if not self.is_active:

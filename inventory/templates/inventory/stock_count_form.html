@@ -1,0 +1,52 @@
+{% extends "workspace/_layout.html" %}
+{% block title %}Enter closing stock - {{ branch.name }}{% endblock %}
+{% block ws_title %}Enter closing stock{% endblock %}
+{% block ws_content %}
+{% include "inventory/_tabs.html" with tab="counts" %}
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<form method="get" class="card ws-card p-3 mb-3 d-flex flex-row flex-wrap align-items-end gap-2">
+  <div>
+    <label for="as_at" class="form-label small fw-semibold mb-1">Closing stock as at</label>
+    <input type="date" id="as_at" name="as_at" value="{{ as_at|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" class="form-control">
+  </div>
+  <button class="btn btn-outline-primary rounded-pill">Show book stock for this date</button>
+  {% if last %}<span class="small text-muted ms-md-2">Last closing stock: {{ last.as_at|date:"d M Y" }}</span>{% endif %}
+</form>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="as_at" value="{{ as_at|date:'Y-m-d' }}">
+  <div class="card ws-card p-0 overflow-hidden mb-3">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light"><tr><th class="ps-3">Item</th><th class="text-end">Book stock<br><span class="small text-muted fw-normal">(purchases &minus; last count)</span></th><th style="width: 190px;">Counted stock</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+          <tr>
+            <td class="ps-3"><div class="fw-semibold">{{ row.item.name }}</div><div class="small text-muted">{{ row.item.category }}</div></td>
+            <td class="text-end">{{ row.book|floatformat:"-3" }} {{ row.item.unit }}</td>
+            <td>
+              <div class="input-group input-group-sm">
+                <input type="number" step="0.001" min="0" name="count_{{ row.item.id }}" class="form-control"
+                       value="{% if row.value %}{{ row.value }}{% else %}{{ row.book|floatformat:'-3' }}{% endif %}" aria-label="Counted {{ row.item.name }}">
+                <span class="input-group-text">{{ row.item.unit }}</span>
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="text-center text-muted py-4">No items yet. Add items and enter a purchase bill first.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mb-3" style="max-width: 480px;">
+    <label class="form-label small fw-semibold" for="notes">Note (optional)</label>
+    <input type="text" id="notes" name="notes" maxlength="255" class="form-control" placeholder="e.g. Month-end count by Priya">
+  </div>
+  <p class="small text-muted">Counted stock is filled with the book stock; change only what is different. Items used = book stock &minus; counted stock, valued at average cost.</p>
+  <button class="btn btn-primary rounded-pill px-4" {% if error %}disabled{% endif %}
+          onclick="return confirm('Save closing stock as at {{ as_at|date:"d M Y" }}? This cannot be changed later.');">Save closing stock</button>
+</form>
+{% endblock %}

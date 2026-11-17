@@ -44,3 +44,18 @@
     </div>
 </div>
 {% endblock %}
+{% block extra_js %}
+<script>
+  // Show "Branch where you work" only for branch staff
+  (function () {
+    var box = document.getElementById('div_id_staff_branch');
+    if (!box) return;
+    function sync() {
+      var picked = document.querySelector('input[name="account_type"]:checked');
+      box.style.display = picked && picked.value === 'staff' ? '' : 'none';
+    }
+    document.querySelectorAll('input[name="account_type"]').forEach(function (r) { r.addEventListener('change', sync); });
+    sync();
+  })();
+</script>
+{% endblock %}

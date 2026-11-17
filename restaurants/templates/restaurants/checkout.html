@@ -142,6 +142,12 @@
                                 <span>Subtotal</span>
                                 <span>₹{{ subtotal }}</span>
                             </li>
+                            {% if discount_amount > 0 %}
+                            <li class="d-flex justify-content-between small text-success mt-2">
+                                <span><i class="bi bi-tag"></i> Offer: {{ offer_title }}</span>
+                                <span>- ₹{{ discount_amount }}</span>
+                            </li>
+                            {% endif %}
                         </ul>
                     </div>
 

@@ -1,0 +1,80 @@
+{% extends "workspace/_layout.html" %}
+{% block title %}Profit &amp; loss - {{ branch.name }}{% endblock %}
+{% block ws_title %}Profit &amp; loss{% endblock %}
+{% block ws_content %}
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card ws-card p-3 p-md-4">
+      <h5 class="fw-bold mb-3">Generate profit &amp; loss</h5>
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        {% for label, f, t in presets %}
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill preset" data-from="{{ f|date:'Y-m-d' }}" data-to="{{ t|date:'Y-m-d' }}">{{ label }}</button>
+        {% endfor %}
+      </div>
+      <form method="post" action="{% url 'reports:profit_loss_generate' branch.id %}">
+        {% csrf_token %}
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label small" for="pl-from">From</label>
+            <input type="date" class="form-control" id="pl-from" name="period_from" value="{{ default_from|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small" for="pl-to">To</label>
+            <input type="date" class="form-control" id="pl-to" name="period_to" value="{{ today|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" required>
+          </div>
+        </div>
+        {% if can_all %}
+        <div class="mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="scope" id="scope-branch" value="branch" checked>
+            <label class="form-check-label" for="scope-branch">This branch ({{ branch.name }})</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="scope" id="scope-all" value="all">
+            <label class="form-check-label" for="scope-all">All branches of {{ branch.organization.name }}</label>
+          </div>
+        </div>
+        {% endif %}
+        <button type="submit" class="btn btn-primary rounded-pill px-4"><i class="bi bi-graph-up-arrow"></i> Generate</button>
+      </form>
+      <p class="small text-muted mt-3 mb-0">Sales are without GST. For correct profit, enter all purchase bills and expenses,
+        and record a closing stock count on the last day of the period.</p>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card ws-card p-3 p-md-4">
+      <h5 class="fw-bold mb-3">Saved reports</h5>
+      {% if reports %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Period</th><th>Branch</th><th class="text-end">Net sales</th><th class="text-end">Profit / loss</th><th></th></tr></thead>
+          <tbody>
+          {% for r in reports %}
+            <tr>
+              <td>{{ r.period_from|date:"d M Y" }} – {{ r.period_to|date:"d M Y" }}</td>
+              <td>{% if r.branch %}{{ r.branch.name }}{% else %}All branches{% endif %}</td>
+              <td class="text-end">₹{{ r.net_sales }}</td>
+              <td class="text-end fw-semibold {% if r.is_loss %}text-danger{% else %}text-success{% endif %}">₹{{ r.net_profit }}</td>
+              <td class="text-end"><a href="{% url 'reports:profit_loss_detail' branch.id r.id %}" class="btn btn-sm btn-outline-primary rounded-pill">View</a></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="small text-muted mb-0">No reports yet. Choose a period and click Generate.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.preset').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.getElementById('pl-from').value = b.dataset.from;
+      document.getElementById('pl-to').value = b.dataset.to;
+    });
+  });
+</script>
+{% endblock %}

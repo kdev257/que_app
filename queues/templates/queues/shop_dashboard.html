@@ -29,6 +29,10 @@
             class="btn btn-outline-dark btn-sm rounded-pill shadow-sm">
             <i class="bi bi-receipt"></i> Invoices
         </a>
+        <a href="{% url 'inventory:staff_stock_count' branch_id %}"
+            class="btn btn-outline-dark btn-sm rounded-pill shadow-sm">
+            <i class="bi bi-clipboard-check"></i> Stock count
+        </a>
         {% if can_setup %}
         <a href="{% url 'branch_gst_settings' branch_id %}"
             class="btn btn-outline-dark btn-sm rounded-pill shadow-sm">

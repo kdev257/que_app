@@ -1,0 +1,54 @@
+{% extends "workspace/_layout.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Highway location - {{ branch.name }}{% endblock %}
+{% block ws_title %}Highway location{% endblock %}
+{% block ws_content %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card ws-card p-3 p-md-4">
+      <p class="text-muted small">For a dhaba or restaurant on a highway. Travellers choose the highway, their KM and direction, and see places ahead of them.
+        City restaurants can skip this.</p>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.highway_choice|as_crispy_field }}
+        <div id="new-highway" class="border rounded-3 p-3 mb-3 bg-light">
+          {{ form.new_highway_name|as_crispy_field }}
+          <div class="row g-2">
+            <div class="col-6">{{ form.new_start_point|as_crispy_field }}</div>
+            <div class="col-6">{{ form.new_end_point|as_crispy_field }}</div>
+          </div>
+          <div class="small text-muted">KM stones count up from the start point.</div>
+        </div>
+        {{ form.milestone_km|as_crispy_field }}
+        {{ form.direction_of_travel|as_crispy_field }}
+        <button type="submit" class="btn btn-primary rounded-pill px-4">Save</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card ws-card p-3 p-md-4">
+      <h6 class="fw-bold">Now saved</h6>
+      {% if current %}
+        <div class="fs-5 fw-semibold">{{ current.highway.name }}, KM {{ current.milestone_km|floatformat:"-2" }}</div>
+        <div class="small text-muted mb-1">{{ current.highway.start_point }} &rarr; {{ current.highway.end_point }}</div>
+        <div class="small mb-1">{{ current.get_direction_of_travel_display }}</div>
+        {% if current.segment %}<div class="small text-muted">Stretch: {{ current.segment.start_place }} to {{ current.segment.end_place }}</div>{% endif %}
+        <form method="post" class="mt-3" onsubmit="return confirm('Remove highway location?');">{% csrf_token %}
+          <button class="btn btn-sm btn-outline-danger rounded-pill" name="action" value="remove"><i class="bi bi-trash"></i> Remove</button>
+        </form>
+      {% else %}
+        <p class="small text-muted mb-0">Not on a highway yet. Customers find you only in city search.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  (function () {
+    var sel = document.getElementById('id_highway_choice'), box = document.getElementById('new-highway');
+    function sync() { box.style.display = sel.value === 'new' ? '' : 'none'; }
+    sel.addEventListener('change', sync); sync();
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends 'help/_base.html' %}
+{% block help_body %}
+<h2 class="hp-title mb-1"><i class="bi bi-cup-hot text-primary"></i> Set up a restaurant or dhaba</h2>
+<p class="text-muted">The setup is the same for a city restaurant, cafe or highway dhaba. Only how customers find you is different (see step 2).</p>
+
+<div class="hp-step"><span class="hp-num">1</span><div>
+  <h6>Register your business</h6>
+  <ul>
+    <li>On the home page click <b>List your business</b> (<a href="{% url 'workspace:signup' %}">open</a>).</li>
+    <li>Choose a username and password and enter your business name. You become the <b>owner</b>.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">2</span><div>
+  <h6>Add your branch</h6>
+  <ul>
+    <li>In the Business Workspace click <b>Add a branch</b> and choose <b>Restaurant</b> as the type of business (also for a dhaba).</li>
+    <li>Fill in address, city, PIN code, phone and opening / closing time. Tick <b>Offers home delivery</b> if you deliver.</li>
+  </ul>
+  <div class="row g-2 mt-2">
+    <div class="col-md-6"><div class="border rounded-3 p-3 h-100">
+      <div class="fw-semibold"><i class="bi bi-buildings"></i> City restaurant</div>
+      <div class="small text-muted">Customers search by city, area, PIN code or landmark. Add nearby landmarks (e.g. "Opp. Metro Station").</div>
+    </div></div>
+    <div class="col-md-6"><div class="border rounded-3 p-3 h-100">
+      <div class="fw-semibold"><i class="bi bi-signpost-split"></i> Highway dhaba</div>
+      <div class="small text-muted">Travellers search by highway and KM stone. Open <b>Highway</b> in the workspace. Pick the highway (or add a new one), enter the <b>KM stone</b> at your dhaba and <b>which side</b> of the road travellers can reach you from.</div>
+    </div></div>
+  </div>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">3</span><div>
+  <h6>Add your menu</h6>
+  <ul>
+    <li>Open <b>Menu</b>. Type a menu section (e.g. Starters, Thali) and an item name.</li>
+    <li>Enter price, preparation time and veg / non-veg. Untick <b>Available</b> when an item runs out.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">4</span><div>
+  <h6>Add tables and print table QR codes</h6>
+  <ul>
+    <li>Open <b>Tables &amp; QR</b>. Add each table with its number and seats.</li>
+    <li>Print the table QR cards and keep one on each table. Guests scan and order without waiting for a waiter.</li>
+    <li>Guests choose to pay online now or pay after eating. Orders from the table are accepted automatically.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">5</span><div>
+  <h6>GST settings (if you are GST registered)</h6>
+  <ul>
+    <li>Open <b>GST</b>. Enter GSTIN, state, invoice prefix and SAC code.</li>
+    <li>Restaurants charge <b>5% without input tax credit</b>. Tick <b>Restaurant in a hotel</b> only if the hotel had a room above ₹7,500 a day - then it is 18% with credit.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">6</span><div>
+  <h6>Wait for approval</h6>
+  <p class="mb-0">QuickQueue checks new branches. Till then the branch shows <b>Waiting for approval</b> and customers cannot find it.</p>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">7</span><div>
+  <h6>Make your website</h6>
+  <ul>
+    <li>Open <b>Website</b>: tagline, about, logo, banner, gallery, offers and your own sections.</li>
+    <li>Tick <b>Publish my website</b> and share the link or QR.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">8</span><div>
+  <h6>Run the day</h6>
+  <ul>
+    <li><b>Kitchen</b> screen: accept or reject orders and mark them preparing and ready.</li>
+    <li><b>Staff / waiter</b> screen: mark guests arrived, food served and order completed (cash collected).</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">9</span><div>
+  <h6>Back office (optional, owner and branch admin)</h6>
+  <ul>
+    <li><b>Stock &amp; purchases</b> - groceries, gas, packing items and your suppliers.</li>
+    <li><b>Stock count</b> at month end, <b>Expenses</b>, and <b>Profit &amp; loss</b> for any period.</li>
+  </ul>
+</div></div>
+
+<div class="hp-tip mt-3"><i class="bi bi-lightbulb"></i> <b>Staff logins</b> (kitchen and waiters): ask each person to <a href="{% url 'register' %}">register</a>, choose <b>Branch staff</b> and pick your branch. Then approve them under <b>Staff</b> in the workspace.</div>
+{% endblock %}

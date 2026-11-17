@@ -1,0 +1,61 @@
+{% extends "workspace/_layout.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Suppliers - {{ branch.name }}{% endblock %}
+{% block ws_title %}Stock &amp; purchases{% endblock %}
+{% block ws_content %}
+{% include "inventory/_tabs.html" with tab="suppliers" %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    {% for s in suppliers %}
+    <div class="card ws-card p-3 mb-2 {% if not s.is_active %}opacity-50{% endif %}">
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <div class="fw-bold">{{ s.name }}{% if s.gstin %} <span class="badge bg-light text-dark border">GSTIN {{ s.gstin }}</span>{% endif %}</div>
+          <div class="small text-muted">{% if s.contact_person %}{{ s.contact_person }} &middot; {% endif %}{{ s.city }}</div>
+          {% if s.items_supplied %}<div class="small">{{ s.items_supplied }}</div>{% endif %}
+        </div>
+        <div class="d-flex flex-wrap gap-1 align-items-start">
+          {% if s.phone %}<a href="tel:{{ s.phone }}" class="btn btn-sm btn-outline-secondary rounded-pill"><i class="bi bi-telephone"></i></a>{% endif %}
+          {% if s.whatsapp_link %}<a href="{{ s.whatsapp_link }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success rounded-pill"><i class="bi bi-whatsapp"></i></a>{% endif %}
+          {% if s.email %}<a href="mailto:{{ s.email }}" class="btn btn-sm btn-outline-secondary rounded-pill"><i class="bi bi-envelope"></i></a>{% endif %}
+          <a href="{% url 'inventory:supplier_edit' branch.id s.id %}" class="btn btn-sm btn-outline-dark rounded-pill">Edit</a>
+          <form method="post" action="{% url 'inventory:supplier_edit' branch.id s.id %}">{% csrf_token %}<button name="toggle" value="1" class="btn btn-sm btn-link">{% if s.is_active %}Switch off{% else %}Switch on{% endif %}</button></form>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="card ws-card p-4 text-center text-muted">No suppliers yet.</div>
+    {% endfor %}
+  </div>
+  <div class="col-lg-5">
+    <div class="card ws-card p-3 p-md-4">
+      <h6 class="fw-bold mb-3">Add supplier</h6>
+      <form method="post" novalidate>{% csrf_token %}{{ form|crispy }}
+        <button class="btn btn-primary rounded-pill px-4">Add supplier</button></form>
+      <p class="small text-muted mt-3 mb-0">Pick a supplier that other shops in your city use, or add a new one. A new supplier's business details (not the contact person) are shown to shops of the same type in your city. What you buy and your rates are never shared.</p>
+    </div>
+  </div>
+</div>
+{{ directory_details|json_script:"supplier-details" }}
+{% endblock %}
+{% block extra_js %}
+<script>
+  // Picking a shared supplier fills the form (you can still edit your copy); "+ Add new" clears it
+  (function () {
+    var select = document.getElementById('id_supplier_choice');
+    if (!select) return;
+    var details = JSON.parse(document.getElementById('supplier-details').textContent);
+    var fields = ['name', 'phone', 'whatsapp', 'email', 'gstin', 'address', 'city', 'items_supplied'];
+    var city = (document.getElementById('id_city') || {}).value || '';
+    select.addEventListener('change', function () {
+      var d = details[select.value];
+      fields.forEach(function (f) {
+        var el = document.getElementById('id_' + f);
+        if (!el) return;
+        if (d) el.value = d[f] || '';
+        else if (select.value === '__new__') el.value = (f === 'city') ? city : '';
+      });
+    });
+  })();
+</script>
+{% endblock %}

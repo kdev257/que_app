@@ -75,6 +75,38 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container">
         <a class="navbar-brand" href="/">QuickQueue</a>
+        {% if HAS_WORKSPACE %}
+        <!-- Business menu (owners / branch admins): always visible, also on phones -->
+        <div class="dropdown order-lg-last ms-auto ms-lg-3 me-2 me-lg-0">
+            <button class="btn btn-warning btn-sm rounded-pill px-3 fw-semibold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-briefcase"></i> Business
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow" style="max-height: 75vh; overflow-y: auto; min-width: 250px;">
+                <li><a class="dropdown-item fw-semibold" href="{% url 'workspace:home' %}"><i class="bi bi-grid me-2"></i>Business Workspace</a></li>
+                {% for b in BUSINESS_BRANCHES %}
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header text-truncate">{{ b.name }}</h6></li>
+                {% if b.is_restaurant %}
+                <li><a class="dropdown-item" href="{% url 'restaurants:kitchen_dashboard' b.id %}"><i class="bi bi-fire me-2"></i>Kitchen</a></li>
+                <li><a class="dropdown-item" href="{% url 'workspace:menu' b.id %}"><i class="bi bi-journal-text me-2"></i>Menu</a></li>
+                <li><a class="dropdown-item" href="{% url 'restaurants:manage_tables' b.id %}"><i class="bi bi-qr-code me-2"></i>Tables &amp; QR</a></li>
+                {% else %}
+                <li><a class="dropdown-item" href="{% url 'shop_dashboard' b.id %}"><i class="bi bi-speedometer2 me-2"></i>Today's queue</a></li>
+                <li><a class="dropdown-item" href="{% url 'workspace:services' b.id %}"><i class="bi bi-scissors me-2"></i>Services &amp; rates</a></li>
+                {% endif %}
+                <li><a class="dropdown-item" href="{% url 'billing:branch_invoices' b.id %}"><i class="bi bi-receipt me-2"></i>Invoices</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory:stock' b.id %}"><i class="bi bi-box-seam me-2"></i>Stock &amp; purchases</a></li>
+                <li><a class="dropdown-item" href="{% url 'inventory:receipt_new' b.id %}"><i class="bi bi-plus-circle me-2"></i>Enter purchase bill</a></li>
+                <li><a class="dropdown-item" href="{% url 'expenses:list' b.id %}"><i class="bi bi-wallet2 me-2"></i>Expenses</a></li>
+                <li><a class="dropdown-item" href="{% url 'reports:profit_loss' b.id %}"><i class="bi bi-graph-up-arrow me-2"></i>Profit &amp; loss</a></li>
+                <li><a class="dropdown-item" href="{% url 'branchsite:edit' b.id %}"><i class="bi bi-globe me-2"></i>Website</a></li>
+                <li><a class="dropdown-item" href="{% url 'branch_gst_settings' b.id %}"><i class="bi bi-percent me-2"></i>GST settings</a></li>
+                <li><a class="dropdown-item" href="{% url 'workspace:branch_edit' b.id %}"><i class="bi bi-gear me-2"></i>Branch details</a></li>
+                <li><a class="dropdown-item" href="{% url 'workspace:staff' b.id %}"><i class="bi bi-people me-2"></i>Staff</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
         
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -82,10 +114,10 @@
 
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto align-items-lg-center gap-2 py-2 py-lg-0">
+                {% if not HAS_WORKSPACE %}
+                    <li class="nav-item"><a class="nav-link text-light" href="{% url 'index' %}">Services</a></li>
+                {% endif %}
                 {% if user.is_authenticated %}
-                    {% if HAS_WORKSPACE %}
-                    <li class="nav-item"><a class="btn btn-warning btn-sm rounded-pill px-3 fw-semibold" href="{% url 'workspace:home' %}"><i class="bi bi-briefcase"></i> Business Workspace</a></li>
-                    {% endif %}
                     <li class="nav-item"><span class="text-light">Hi, {{ user.first_name|default:user.username }}</span></li>
                     <li class="nav-item"><a class="btn btn-outline-light btn-sm px-3" href="{% url 'logout_view' %}">Logout</a></li>
                 {% else %}

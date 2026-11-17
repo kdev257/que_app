@@ -6,17 +6,18 @@ Thank you for visiting {{ invoice.seller_name }}. Here is your invoice.
 Date: {{ invoice.created_at|date:"d M Y, h:i A" }}
 Token: #{{ invoice.token_number }}
 {% if invoice.is_gst_invoice %}GSTIN: {{ invoice.gstin }}
+{% if invoice.place_of_supply_code %}Place of supply: {{ invoice.place_of_supply_name }} ({{ invoice.place_of_supply_code }})
+{% endif %}{% endif %}{% if invoice.customer_gstin %}Billed to: {{ invoice.customer_business_name|default:invoice.customer_name }}, GSTIN {{ invoice.customer_gstin }}
 {% endif %}
 {% for item in items %}- {{ item.description }} x {{ item.quantity }} @ Rs.{{ item.unit_price }} = Rs.{{ item.amount }}
 {% endfor %}
 Subtotal: Rs.{{ invoice.subtotal }}
 {% if invoice.discount_amount > 0 %}Discount: -Rs.{{ invoice.discount_amount }}
 {% endif %}{% if invoice.is_gst_invoice %}Taxable Value: Rs.{{ invoice.taxable_amount }}
-CGST: Rs.{{ invoice.cgst_amount }}
-SGST: Rs.{{ invoice.sgst_amount }}
-{% endif %}{% if invoice.booking_fee > 0 %}Booking Fee: Rs.{{ invoice.booking_fee }}
-{% endif %}{% if invoice.booking_fee_gst_amount > 0 %}GST on Booking Fee @ {{ invoice.booking_fee_gst_percentage }}%: Rs.{{ invoice.booking_fee_gst_amount }}
-{% endif %}TOTAL: Rs.{{ invoice.total_amount }}
+{% for label, amount in invoice.tax_lines %}{{ label }}: Rs.{{ amount }}
+{% endfor %}{% endif %}{% if invoice.booking_fee > 0 %}Booking Fee: Rs.{{ invoice.booking_fee }}
+{% endif %}{% if invoice.booking_fee_gst_amount > 0 %}{% for label, amount in invoice.fee_tax_lines %}{{ label }} on Booking Fee: Rs.{{ amount }}
+{% endfor %}{% endif %}TOTAL: Rs.{{ invoice.total_amount }}
 Payment: {{ invoice.payment_status_display }}
 
 {% if rate_url %}How was your visit? Rate it here (no login needed):

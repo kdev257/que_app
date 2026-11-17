@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}QuickQueue - Run your whole small business from one app{% endblock %}
+{% block extra_css %}
+<style>
+  .lp section { margin-bottom: 4rem; }
+  .lp-hero { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color: #fff; border-radius: 1.5rem;
+             padding: 3.5rem 2rem; position: relative; overflow: hidden; }
+  .lp-hero::after { content: ""; position: absolute; right: -120px; top: -120px; width: 380px; height: 380px;
+                    border-radius: 50%; background: rgba(250, 204, 21, .18); }
+  .lp-hero h1 { font-weight: 800; letter-spacing: -1px; line-height: 1.1; }
+  .lp-hero .accent { color: #facc15; }
+  .lp-hero .lead { color: #cbd5e1; max-width: 560px; }
+  .lp-pill { display: inline-block; background: rgba(255,255,255,.12); color: #e2e8f0; border-radius: 999px;
+             padding: .35rem .9rem; font-size: .85rem; margin-bottom: 1rem; }
+  .lp-card { background: #fff; border: 0; border-radius: 1rem; box-shadow: 0 1px 8px rgba(15,23,42,.07); height: 100%; padding: 1.5rem; }
+  .lp-icon { width: 46px; height: 46px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+             font-size: 1.35rem; background: #eff6ff; color: #1d4ed8; margin-bottom: .9rem; }
+  .lp-usp .lp-icon { background: #fef9c3; color: #a16207; }
+  .lp-title { font-weight: 800; letter-spacing: -.5px; }
+  .lp-cat { display: flex; align-items: center; gap: .75rem; padding: 1rem 1.25rem; background: #fff; border-radius: 1rem;
+            box-shadow: 0 1px 8px rgba(15,23,42,.07); color: #0f172a; text-decoration: none; height: 100%;
+            transition: transform .15s, box-shadow .15s; }
+  .lp-cat:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(15,23,42,.12); color: #1d4ed8; }
+  .lp-step { width: 34px; height: 34px; border-radius: 50%; background: #1d4ed8; color: #fff; font-weight: 700;
+             display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .lp-cta { background: #facc15; border-radius: 1.5rem; padding: 2.5rem 2rem; }
+  .lp-jump a { white-space: nowrap; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="lp">
+
+  <!-- Hero -->
+  <section class="lp-hero">
+    <div class="row align-items-center g-4 position-relative" style="z-index: 1;">
+      <div class="col-lg-7">
+        <span class="lp-pill"><i class="bi bi-stars"></i> For salons, restaurants and small shops</span>
+        <h1 class="display-5 mb-3">Run your whole business<br><span class="accent">from one simple app.</span></h1>
+        <p class="lead mb-4">Queue, bookings, QR table ordering, GST invoices, stock, expenses and profit &amp; loss -
+          all in QuickQueue. No more five different tools, registers and spreadsheets.</p>
+        <div class="d-flex flex-wrap gap-2">
+          {% if HAS_WORKSPACE %}
+            <a href="{% url 'workspace:home' %}" class="btn btn-warning btn-lg rounded-pill px-4 fw-semibold"><i class="bi bi-briefcase"></i> Go to my workspace</a>
+          {% else %}
+            <a href="{% url 'workspace:signup' %}" class="btn btn-warning btn-lg rounded-pill px-4 fw-semibold"><i class="bi bi-shop"></i> List your business</a>
+          {% endif %}
+          <a href="{% url 'index' %}" class="btn btn-outline-light btn-lg rounded-pill px-4"><i class="bi bi-calendar-check"></i> Book a service</a>
+        </div>
+      </div>
+      <div class="col-lg-5 text-center d-none d-lg-block">
+        <img src="{% static 'queLogo.png' %}" alt="QuickQueue" class="img-fluid rounded-4 bg-white p-3 shadow" style="max-height: 320px;">
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick links -->
+  <nav class="lp-jump d-flex flex-wrap gap-2 justify-content-center mb-5" aria-label="Page sections">
+    <a href="#customers" class="btn btn-sm btn-outline-dark rounded-pill">For customers</a>
+    <a href="#business" class="btn btn-sm btn-outline-dark rounded-pill">For business</a>
+    <a href="#why" class="btn btn-sm btn-outline-dark rounded-pill">Why QuickQueue</a>
+    <a href="#how" class="btn btn-sm btn-outline-dark rounded-pill">How it works</a>
+    <a href="#help" class="btn btn-sm btn-outline-dark rounded-pill">Help guides</a>
+    <a href="#support" class="btn btn-sm btn-outline-dark rounded-pill">Support</a>
+  </nav>
+
+  <!-- Customers: services pages -->
+  <section id="customers">
+    <div class="text-center mb-4">
+      <h2 class="lp-title">Book or order - skip the line</h2>
+      <p class="text-muted mb-0">Pick a service. See live queues, book a slot or order food from your table.</p>
+    </div>
+    <div class="row g-3">
+      {% for c in categories %}
+      <div class="col-6 col-md-4 col-lg-3">
+        <a href="{% url 'services_list' c.id %}" class="lp-cat">
+          <span class="lp-icon mb-0"><i class="bi bi-{% if 'restaurant' in c.name|lower or 'cafe' in c.name|lower %}cup-hot{% elif 'spa' in c.name|lower %}flower1{% elif 'groom' in c.name|lower or 'salon' in c.name|lower or 'nail' in c.name|lower %}scissors{% elif 'hospital' in c.name|lower or 'clinic' in c.name|lower %}heart-pulse{% else %}shop{% endif %}"></i></span>
+          <span class="fw-semibold">{{ c.name }}</span>
+        </a>
+      </div>
+      {% endfor %}
+      <div class="col-6 col-md-4 col-lg-3">
+        <a href="{% url 'restaurants:restaurant_search' %}" class="lp-cat">
+          <span class="lp-icon mb-0"><i class="bi bi-search"></i></span>
+          <span class="fw-semibold">Find a restaurant</span>
+        </a>
+      </div>
+    </div>
+    <div class="text-center mt-4">
+      <a href="{% url 'index' %}" class="btn btn-primary rounded-pill px-4">See all services <i class="bi bi-arrow-right"></i></a>
+      {% if not user.is_authenticated %}
+      <a href="{% url 'guest_login' %}" class="btn btn-link">Continue as guest</a>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Business features -->
+  <section id="business">
+    <div class="text-center mb-4">
+      <h2 class="lp-title">Everything a small business needs</h2>
+      <p class="text-muted mb-0">From the first customer at the door to the profit at month end.</p>
+    </div>
+    <div class="row g-3">
+      <div class="col-md-6 col-lg-4"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-people"></i></span>
+        <h5 class="fw-bold">Queue &amp; bookings</h5>
+        <p class="text-muted small mb-0">Live token queue and slot booking. Customers wait from home, not at your door.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-4"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-qr-code-scan"></i></span>
+        <h5 class="fw-bold">QR table ordering</h5>
+        <p class="text-muted small mb-0">Guests scan the table QR and order without waiting for a waiter. Pay now or after eating.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-4"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-globe"></i></span>
+        <h5 class="fw-bold">Your own website</h5>
+        <p class="text-muted small mb-0">A ready branch website with banner, gallery, reviews and offers - with a link and QR to share.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-4"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-receipt"></i></span>
+        <h5 class="fw-bold">GST invoices</h5>
+        <p class="text-muted small mb-0">GST-ready bills with the right CGST, SGST or IGST, invoice series and credit notes.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-4"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-box-seam"></i></span>
+        <h5 class="fw-bold">Stock &amp; purchases</h5>
+        <p class="text-muted small mb-0">Purchase bills, suppliers, low-stock alerts and closing stock counts by staff, approved by you.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-4"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-graph-up-arrow"></i></span>
+        <h5 class="fw-bold">Expenses &amp; profit</h5>
+        <p class="text-muted small mb-0">Record expenses and get a profit &amp; loss account for any period with one click.</p>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- USP -->
+  <section id="why" class="lp-usp">
+    <div class="text-center mb-4">
+      <h2 class="lp-title">Why QuickQueue</h2>
+      <p class="text-muted mb-0">What makes it different from a simple queue or billing app.</p>
+    </div>
+    <div class="row g-3">
+      <div class="col-md-6 col-lg-3"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-ui-checks-grid"></i></span>
+        <h6 class="fw-bold">One app, not five</h6>
+        <p class="text-muted small mb-0">Customer side and back office in one place. A booking becomes a bill, the bill flows into your profit.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-3"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-shield-check"></i></span>
+        <h6 class="fw-bold">GST rules built in</h6>
+        <p class="text-muted small mb-0">Place of supply, fixed rates by law and GSTIN checks are done for you. Fewer mistakes at filing time.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-3"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-diagram-3"></i></span>
+        <h6 class="fw-bold">Made for many branches</h6>
+        <p class="text-muted small mb-0">Owner, branch admin and staff each see only what they need. View one branch or all together.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-3"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-lock"></i></span>
+        <h6 class="fw-bold">Your data stays yours</h6>
+        <p class="text-muted small mb-0">Your sales, rates and customers are never shared with other shops.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-3"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-phone"></i></span>
+        <h6 class="fw-bold">Works on any phone</h6>
+        <p class="text-muted small mb-0">Runs in the browser and can be added to the home screen. No costly hardware.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-3"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-tags"></i></span>
+        <h6 class="fw-bold">Offers that apply themselves</h6>
+        <p class="text-muted small mb-0">Set an offer with dates once. The discount is applied on every bill automatically.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-3"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-truck"></i></span>
+        <h6 class="fw-bold">Supplier directory</h6>
+        <p class="text-muted small mb-0">Find suppliers listed by other businesses of your type in your city.</p>
+      </div></div>
+      <div class="col-md-6 col-lg-3"><div class="lp-card">
+        <span class="lp-icon"><i class="bi bi-lightning-charge"></i></span>
+        <h6 class="fw-bold">Ready for accounting</h6>
+        <p class="text-muted small mb-0">Every sale, purchase and expense carries an account code, so moving to full accounts is easy.</p>
+      </div></div>
+    </div>
+      <div class="lp-card mt-3 d-flex flex-column flex-md-row align-items-md-center gap-3" style="background:#ecfdf5;">
+      <span class="lp-icon mb-0" style="background:#d1fae5;color:#047857;"><i class="bi bi-geo-alt-fill"></i></span>
+      <div>
+        <h6 class="fw-bold mb-1">We do not track your location</h6>
+        <p class="text-muted small mb-0">QuickQueue never asks for your phone's GPS and never follows where you go.
+          Shops near you are found from the PIN code or area you type - nothing more. More privacy for customers and businesses.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how">
+    <div class="text-center mb-4"><h2 class="lp-title">Start in 3 steps</h2></div>
+    <div class="row g-3">
+      <div class="col-md-4"><div class="lp-card d-flex gap-3">
+        <span class="lp-step">1</span>
+        <div><h6 class="fw-bold">Register your business</h6><p class="text-muted small mb-0">Add your branch, timings and GST details.</p></div>
+      </div></div>
+      <div class="col-md-4"><div class="lp-card d-flex gap-3">
+        <span class="lp-step">2</span>
+        <div><h6 class="fw-bold">Add services or menu</h6><p class="text-muted small mb-0">Set rates, staff and publish your website.</p></div>
+      </div></div>
+      <div class="col-md-4"><div class="lp-card d-flex gap-3">
+        <span class="lp-step">3</span>
+        <div><h6 class="fw-bold">Share your link &amp; QR</h6><p class="text-muted small mb-0">Customers book or order. You run the rest from the workspace.</p></div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- Final call to action -->
+  <section class="lp-cta text-center">
+    <h2 class="lp-title mb-2">Ready to grow your business?</h2>
+    <p class="mb-4">Join QuickQueue and manage queue, billing, stock and profit from one place.</p>
+    <div class="d-flex flex-wrap gap-2 justify-content-center">
+      {% if HAS_WORKSPACE %}
+        <a href="{% url 'workspace:home' %}" class="btn btn-dark btn-lg rounded-pill px-4">Go to my workspace</a>
+      {% else %}
+        <a href="{% url 'workspace:signup' %}" class="btn btn-dark btn-lg rounded-pill px-4">List your business</a>
+        {% if not user.is_authenticated %}<a href="{% url 'user_login' %}" class="btn btn-outline-dark btn-lg rounded-pill px-4">Login</a>{% endif %}
+      {% endif %}
+      <a href="{% url 'index' %}" class="btn btn-outline-dark btn-lg rounded-pill px-4">Book a service</a>
+    </div>
+  </section>
+
+  <!-- Help guides -->
+  <section id="help">
+    <div class="text-center mb-4">
+      <h2 class="lp-title">Help &amp; setup guides</h2>
+      <p class="text-muted mb-0">Step-by-step guides to get started.</p>
+    </div>
+    <div class="row g-3">
+      <div class="col-md-4"><a href="{% url 'help_page' 'salon-setup' %}" class="lp-cat">
+        <span class="lp-icon mb-0"><i class="bi bi-scissors"></i></span>
+        <span><span class="fw-semibold d-block">Salon &amp; service setup</span><span class="small text-muted">Salons, spas, nail studios</span></span>
+      </a></div>
+      <div class="col-md-4"><a href="{% url 'help_page' 'restaurant-setup' %}" class="lp-cat">
+        <span class="lp-icon mb-0"><i class="bi bi-cup-hot"></i></span>
+        <span><span class="fw-semibold d-block">Restaurant &amp; dhaba setup</span><span class="small text-muted">City restaurants and highway dhabas</span></span>
+      </a></div>
+      <div class="col-md-4"><a href="{% url 'help_page' 'customers' %}" class="lp-cat">
+        <span class="lp-icon mb-0"><i class="bi bi-person-check"></i></span>
+        <span><span class="fw-semibold d-block">Help for customers</span><span class="small text-muted">Find, book, order and pay</span></span>
+      </a></div>
+    </div>
+  </section>
+
+  <!-- Support -->
+  <section id="support" class="text-center">
+    <h2 class="lp-title mb-2">Need help?</h2>
+    <p class="text-muted mb-3">Questions, setup help or feedback - write to us. We are happy to help.</p>
+    <a href="mailto:{{ support_email }}" class="btn btn-outline-primary btn-lg rounded-pill px-4"><i class="bi bi-envelope"></i> {{ support_email }}</a>
+  </section>
+</div>
+{% endblock %}

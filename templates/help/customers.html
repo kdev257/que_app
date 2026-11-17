@@ -1,0 +1,60 @@
+{% extends 'help/_base.html' %}
+{% block help_body %}
+<h2 class="hp-title mb-1"><i class="bi bi-person-check text-primary"></i> Help for customers</h2>
+<p class="text-muted">Book a service or order food without standing in a line.</p>
+
+<div class="hp-step"><span class="hp-num">1</span><div>
+  <h6>Login, register or continue as guest</h6>
+  <ul>
+    <li>You can look at shops and menus without logging in.</li>
+    <li>When you add to cart, <a href="{% url 'user_login' %}">log in</a>, <a href="{% url 'register' %}">register</a> or <a href="{% url 'guest_login' %}">continue as guest</a>.</li>
+    <li>Prices are shown after you log in or continue as guest.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">2</span><div>
+  <h6>Find a salon or service</h6>
+  <ul>
+    <li>Go to <a href="{% url 'index' %}">Services</a> and pick a category.</li>
+    <li>Shops near your PIN code come first. You can also search by name, area or landmark.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">3</span><div>
+  <h6>Find a restaurant or dhaba</h6>
+  <div class="row g-2 mt-1">
+    <div class="col-md-6"><div class="border rounded-3 p-3 h-100">
+      <div class="fw-semibold"><i class="bi bi-buildings"></i> In the city</div>
+      <div class="small text-muted">Open <a href="{% url 'restaurants:restaurant_search' %}">Find a restaurant</a> and search by city, PIN code or landmark.</div>
+    </div></div>
+    <div class="col-md-6"><div class="border rounded-3 p-3 h-100">
+      <div class="fw-semibold"><i class="bi bi-signpost-split"></i> On a highway</div>
+      <div class="small text-muted">Choose <b>Highway</b> search, pick the highway, enter the KM stone you are at, your direction and how far ahead to look. Dhabas on your way are listed.</div>
+    </div></div>
+  </div>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">4</span><div>
+  <h6>Book a service</h6>
+  <ul>
+    <li>Add services to the cart, pick a time and confirm. Pay online or pay at the shop.</li>
+    <li>Track your token live and arrive when your turn is near. Offers are applied on the bill automatically.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">5</span><div>
+  <h6>Order from your table</h6>
+  <ul>
+    <li>Scan the QR code on the table with your phone camera.</li>
+    <li>Add dishes and place the order - no need to wait for a waiter.</li>
+    <li>Choose <b>pay now</b> online or <b>pay after eating</b>. Watch the order status on your phone.</li>
+  </ul>
+</div></div>
+
+<div class="hp-step"><span class="hp-num">6</span><div>
+  <h6>Bill and review</h6>
+  <p class="mb-0">You get a proper bill (GST invoice if the shop is registered). After your visit, rate the shop to help others.</p>
+</div></div>
+
+<div class="hp-tip mt-3"><i class="bi bi-shield-lock"></i> For your safety you are logged out after 5 minutes of no activity (not while a booking is active).</div>
+{% endblock %}
